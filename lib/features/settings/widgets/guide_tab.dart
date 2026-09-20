@@ -31,7 +31,14 @@ class GuideTab extends ConsumerWidget {
             (
               label: 'Gemini key added',
               done: config.hasGeminiKey,
-              detail: 'Powers screen solving and transcription.',
+              detail:
+                  'Powers screen solving. Not needed to listen — '
+                  'transcription runs on this Mac.',
+            ),
+            (
+              label: 'Speech Recognition granted',
+              done: hud.speechReady,
+              detail: 'On-device transcription. Free, no key, no quota.',
             ),
             (
               label: 'Screen Recording granted',

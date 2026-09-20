@@ -7,8 +7,13 @@ import '../models/hotkey_binding.dart';
 
 /// Which engine turns speech segments into text.
 enum TranscriptionBackend {
-  /// One Gemini call per utterance the VAD isolates. Default: no extra
-  /// connection to keep alive, and it degrades gracefully on a flaky network.
+  /// Apple's Speech framework, on-device. The default, and the right one:
+  /// dictation is a solved problem the OS does locally, for free, with no key,
+  /// no network hop per sentence and no per-minute quota.
+  appleOnDevice('macOS on-device (free, no key)'),
+
+  /// One Gemini call per utterance the VAD isolates. Costs a request per
+  /// sentence; worth it only when you need a specific model's accuracy.
   geminiBatch('Gemini (per utterance)'),
 
   /// Gemini Live bidirectional WebSocket — continuous partial transcripts.
@@ -23,7 +28,7 @@ enum TranscriptionBackend {
   static TranscriptionBackend fromName(String? name) =>
       TranscriptionBackend.values.firstWhere(
         (TranscriptionBackend b) => b.name == name,
-        orElse: () => TranscriptionBackend.geminiBatch,
+        orElse: () => TranscriptionBackend.appleOnDevice,
       );
 }
 
@@ -64,8 +69,9 @@ class XpSettings {
     this.systemAudioEnabled = true,
     this.autoAnswer = true,
     this.autoScreenSolve = true,
-    this.transcriptionBackend = TranscriptionBackend.geminiBatch,
+    this.transcriptionBackend = TranscriptionBackend.appleOnDevice,
     this.transcriptionRpm = 12,
+    this.speechLocale = 'en-US',
     this.transcribeMic = false,
     this.rivaBaseUrl = 'http://localhost:9000/v1',
     this.fastPromptOverride = '',
@@ -166,6 +172,9 @@ class XpSettings {
   /// screen solves.
   final int transcriptionRpm;
 
+  /// Language the on-device recogniser listens for.
+  final String speechLocale;
+
   /// Transcribe your own microphone as well as the interviewer.
   ///
   /// Off by default: it roughly halves the request rate, and you already know
@@ -182,6 +191,11 @@ class XpSettings {
   /// Portfolio site the profile importer reads from.
   final String portfolioUrl;
   final Map<HotkeyAction, HotkeyBinding> hotkeys;
+
+  /// True when transcription needs a cloud key at all.
+  bool get transcriptionNeedsGeminiKey =>
+      transcriptionBackend == TranscriptionBackend.geminiBatch ||
+      transcriptionBackend == TranscriptionBackend.geminiLive;
 
   /// The Gemini model a solve actually uses, given the reasoning toggle.
   String get activeSolveModel =>
@@ -210,6 +224,7 @@ class XpSettings {
     bool? autoScreenSolve,
     TranscriptionBackend? transcriptionBackend,
     int? transcriptionRpm,
+    String? speechLocale,
     bool? transcribeMic,
     String? rivaBaseUrl,
     String? fastPromptOverride,
@@ -238,6 +253,7 @@ class XpSettings {
       autoScreenSolve: autoScreenSolve ?? this.autoScreenSolve,
       transcriptionBackend: transcriptionBackend ?? this.transcriptionBackend,
       transcriptionRpm: transcriptionRpm ?? this.transcriptionRpm,
+      speechLocale: speechLocale ?? this.speechLocale,
       transcribeMic: transcribeMic ?? this.transcribeMic,
       rivaBaseUrl: rivaBaseUrl ?? this.rivaBaseUrl,
       fastPromptOverride: fastPromptOverride ?? this.fastPromptOverride,
@@ -281,9 +297,13 @@ class SettingsController extends ChangeNotifier {
   String get _envGeminiKey =>
       _env['GEMINI_API_KEY'] ?? _env['GOOGLE_API_KEY'] ?? '';
 
+  /// Bumped whenever a stored value needs migrating. See [_migrate].
+  static const int schemaVersion = 2;
+
   static Future<SettingsController> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final Map<String, String> env = await _readEnvironment();
+    await _migrate(prefs);
 
     final Map<HotkeyAction, HotkeyBinding> hotkeys =
         <HotkeyAction, HotkeyBinding>{};
@@ -322,6 +342,7 @@ class SettingsController extends ChangeNotifier {
         prefs.getString('transcriptionBackend'),
       ),
       transcriptionRpm: prefs.getInt('transcriptionRpm') ?? 12,
+      speechLocale: prefs.getString('speechLocale') ?? 'en-US',
       transcribeMic: prefs.getBool('transcribeMic') ?? false,
       rivaBaseUrl: prefs.getString('rivaBaseUrl') ?? 'http://localhost:9000/v1',
       fastPromptOverride: prefs.getString('fastPromptOverride') ?? '',
@@ -337,6 +358,31 @@ class SettingsController extends ChangeNotifier {
 
   static String? _nonEmpty(String? value) =>
       (value == null || value.isEmpty) ? null : value;
+
+  /// Moves stored settings forward when a default changes.
+  ///
+  /// Changing a default only affects fresh installs — an existing install keeps
+  /// whatever it saved, which is how someone ends up still paying a cloud
+  /// quota for transcription long after the local recogniser became the
+  /// default. Anyone who deliberately picked a cloud backend after this
+  /// migration ran keeps it, because the version is bumped either way.
+  static Future<void> _migrate(SharedPreferences prefs) async {
+    final int from = prefs.getInt('settingsVersion') ?? 1;
+    if (from >= schemaVersion) return;
+
+    if (from < 2) {
+      // v1 shipped Gemini-per-utterance as the default. On-device is free,
+      // quota-free and needs no key, so move anyone still on the old default.
+      if (prefs.getString('transcriptionBackend') == 'geminiBatch') {
+        await prefs.setString(
+          'transcriptionBackend',
+          TranscriptionBackend.appleOnDevice.name,
+        );
+      }
+    }
+
+    await prefs.setInt('settingsVersion', schemaVersion);
+  }
 
   Future<void> update(XpSettings next) async {
     _value = next;
@@ -367,6 +413,7 @@ class SettingsController extends ChangeNotifier {
       _prefs.setBool('autoScreenSolve', next.autoScreenSolve),
       _prefs.setString('transcriptionBackend', next.transcriptionBackend.name),
       _prefs.setInt('transcriptionRpm', next.transcriptionRpm),
+      _prefs.setString('speechLocale', next.speechLocale),
       _prefs.setBool('transcribeMic', next.transcribeMic),
       _prefs.setString('rivaBaseUrl', next.rivaBaseUrl),
       _prefs.setString('fastPromptOverride', next.fastPromptOverride),

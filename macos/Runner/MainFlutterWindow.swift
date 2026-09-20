@@ -25,6 +25,7 @@ final class MainFlutterWindow: NSWindow {
   private var stealthBridge: StealthWindowBridge?
   private var mediaBridge: MediaBridge?
   private var hotkeyBridge: GlobalHotkeyBridge?
+  private var speechBridge: SpeechRecognitionBridge?
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -39,7 +40,12 @@ final class MainFlutterWindow: NSWindow {
 
     let messenger = flutterViewController.engine.binaryMessenger
     stealthBridge = StealthWindowBridge(window: self, messenger: messenger)
-    mediaBridge = MediaBridge(messenger: messenger, hostWindow: self)
+    let media = MediaBridge(messenger: messenger, hostWindow: self)
+    let speech = SpeechRecognitionBridge(messenger: messenger)
+    // The capture taps live in MediaBridge; the recogniser needs their buffers.
+    media.speech = speech
+    mediaBridge = media
+    speechBridge = speech
     hotkeyBridge = GlobalHotkeyBridge(messenger: messenger)
 
     super.awakeFromNib()

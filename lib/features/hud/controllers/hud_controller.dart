@@ -9,6 +9,7 @@ import '../../../core/models/audio_models.dart';
 import '../../../core/models/hotkey_binding.dart';
 import '../../../core/services/audio_capture_service.dart';
 import '../../../core/services/gemini_service.dart';
+import '../../../core/services/native_speech_service.dart';
 import '../../../core/services/nvidia_nim_service.dart';
 import '../../../core/services/portfolio_importer.dart';
 import '../../../core/services/profile_service.dart';
@@ -36,6 +37,7 @@ class HudController extends ChangeNotifier {
     required this.nim,
     required this.profile,
     required this.portfolio,
+    required this.speech,
   });
 
   final SettingsController settings;
@@ -47,6 +49,7 @@ class HudController extends ChangeNotifier {
   final NvidiaNimService nim;
   final ProfileService profile;
   final PortfolioImporter portfolio;
+  final NativeSpeechService speech;
 
   // ----------------------------------------------------------------- state
   HudStatus _status = HudStatus.idle;
@@ -83,6 +86,28 @@ class HudController extends ChangeNotifier {
   bool _bannerIsError = false;
   bool get bannerIsError => _bannerIsError;
 
+  /// Live counts for each stage of the listen pipeline.
+  ///
+  /// "Nothing happened" is the hardest failure to debug mid-call, so every
+  /// stage is counted and shown. The first stage sitting at zero while the one
+  /// before it is climbing tells you exactly where it broke.
+  int _systemFrames = 0;
+  int _micFrames = 0;
+  int _segments = 0;
+  int _transcripts = 0;
+  int _answers = 0;
+
+  int get systemFrames => _systemFrames;
+  int get micFrames => _micFrames;
+  int get speechSegments => _segments;
+  int get transcriptLines => _transcripts;
+  int get answersStarted => _answers;
+
+  /// The last pipeline failure. Unlike a banner this never auto-clears, so a
+  /// glance at the panel after the fact still explains what went wrong.
+  String? _pipelineError;
+  String? get pipelineError => _pipelineError;
+
   double _micLevel = 0;
   double _systemLevel = 0;
   double get micLevel => _micLevel;
@@ -90,6 +115,17 @@ class HudController extends ChangeNotifier {
 
   bool _screenPermission = false;
   bool get hasScreenPermission => _screenPermission;
+
+  bool _speechReady = false;
+  bool get speechReady => _speechReady;
+
+  LaunchDiagnostics _launch = LaunchDiagnostics.unknown;
+  LaunchDiagnostics get launch => _launch;
+
+  /// True when Apple's recogniser fell back to its server rather than running
+  /// locally, which happens when the language pack is not installed.
+  bool _speechOnDevice = true;
+  bool get speechIsOnDevice => _speechOnDevice;
 
   HudPane _pane = HudPane.answer;
   HudPane get pane => _pane;
@@ -112,7 +148,7 @@ class HudController extends ChangeNotifier {
   StreamSubscription<AudioFrame>? _frameSub;
   StreamSubscription<String>? _audioErrorSub;
   StreamSubscription<TranscriptEvent>? _transcriptSub;
-  StreamSubscription<String>? _transcriberErrorSub;
+  StreamSubscription<TranscriberIssue>? _transcriberErrorSub;
   StreamSubscription<String>? _deltaSub;
 
   Completer<void>? _turnCompleter;
@@ -134,21 +170,42 @@ class HudController extends ChangeNotifier {
     settings.addListener(_onSettingsChanged);
 
     _screenPermission = await screen.hasPermission();
+    _speechReady = (await speech.authorizationStatus()).isGranted;
     await window.setOpacity(settings.value.opacity);
 
     _registerHotkeys();
     await hotkeys.applyBindings(settings.value.hotkeys);
     _reportHotkeyFailures();
 
+    // Deliberately does NOT request Speech Recognition here. Asking trips TCC,
+    // and if this process was exec'd from a shell the request is evaluated
+    // against the *terminal's* Info.plist — which has no speech usage
+    // description, so macOS kills xpass outright. Reading the status is a
+    // local lookup and is always safe; the request happens behind an explicit
+    // button in Settings.
+    _launch = await screen.launchDiagnostics();
+    if (!_launch.launchedByLaunchd) {
+      _pipelineError =
+          'xpass was launched from a terminal, so macOS is applying that '
+          'terminal\'s privacy permissions instead of xpass\'s. Screen '
+          'Recording will read as denied and requesting Speech Recognition '
+          'will crash the app. Quit and run: open ${_launch.bundlePath}';
+      _setBanner(_pipelineError!, isError: true);
+    }
+
     if (!settings.value.isConfigured) {
       _setBanner(
-        'Add an API key in Settings to start. ⌘⌥H hides xpass instantly.',
+        'Add an API key in Settings to answer questions. ⌘⌥H hides xpass '
+        'instantly.',
         isError: false,
       );
       _pane = HudPane.settings;
-    } else {
-      await startListening();
     }
+
+    // Start capturing either way. Transcription is free and local now, so
+    // there is no reason to sit deaf waiting for a key — and a moving level
+    // meter is the fastest proof that the audio path works.
+    await startListening();
     notifyListeners();
   }
 
@@ -198,6 +255,17 @@ class HudController extends ChangeNotifier {
       }
     }
 
+    // isConfigured only means *some* key exists. Transcription needs the key
+    // for its own backend, and without it every utterance fails silently.
+    if (config.transcriptionNeedsGeminiKey && !config.hasGeminiKey) {
+      _pipelineError =
+          'Listening needs a Gemini API key for transcription — an NVIDIA key '
+          'alone only powers the answers. Add one under Settings › Models.';
+      _setBanner(_pipelineError!, isError: true);
+      _setStatus(HudStatus.error);
+      return;
+    }
+
     final AudioStartResult result = await audio.start(
       mic: config.micEnabled,
       system: config.systemAudioEnabled,
@@ -207,6 +275,10 @@ class HudController extends ChangeNotifier {
     _systemActive = result.systemStarted;
 
     if (!result.anyStarted) {
+      _pipelineError =
+          result.firstError ??
+          'Could not start audio capture. Grant Screen Recording in System '
+              'Settings › Privacy & Security, then relaunch.';
       _setBanner(
         result.firstError ??
             'Could not start audio capture. Grant Screen Recording in '
@@ -225,19 +297,36 @@ class HudController extends ChangeNotifier {
       );
     }
 
-    await _startTranscriber();
-
+    // Wire up capture BEFORE the transcriber, and never let a transcription
+    // failure tear it down. Capture working is what the level meters prove,
+    // and it is the one thing that tells the user whether the problem is the
+    // audio path or everything after it. An earlier version returned early
+    // here, so an ungranted Speech Recognition prompt killed the whole HUD.
     _frameSub = audio.frames.listen(_onAudioFrame);
     _audioErrorSub = audio.errors.listen((String message) {
       _micActive = false;
       _systemActive = false;
       _listening = false;
+      _pipelineError = message;
       _setBanner(message, isError: true);
       _setStatus(HudStatus.error);
     });
 
     _listening = true;
     _setStatus(HudStatus.listening);
+
+    try {
+      await _startTranscriber();
+    } on AiServiceException catch (error) {
+      // Degraded, not dead: audio still flows, the meters still move, and the
+      // ask box and screen solving are untouched.
+      _pipelineError =
+          '${error.message} '
+          'Audio is still being captured — you can type a question or press '
+          '⌘⌥C.';
+      _setBanner(_pipelineError!, isError: true);
+    }
+    notifyListeners();
   }
 
   Future<void> stopListening() async {
@@ -269,15 +358,67 @@ class HudController extends ChangeNotifier {
       backend: settings.value.transcriptionBackend,
       settings: settings.value,
       gemini: gemini,
+      speech: speech,
     );
 
     _transcriptSub = transcriber.events.listen(_onTranscript);
-    _transcriberErrorSub = transcriber.errors.listen(
-      (String message) => _setBanner(message, isError: true),
+    _transcriberErrorSub = transcriber.errors.listen((TranscriberIssue issue) {
+      _pipelineError = issue.message;
+      _setBanner(issue.message, isError: true);
+      if (issue.requiresFallback) unawaited(_fallBackToOnDevice());
+    });
+
+    try {
+      await transcriber.start();
+      _transcriber = transcriber;
+      if (transcriber is NativeSpeechTranscriber) {
+        _speechReady = true;
+        _speechOnDevice = transcriber.onDevice;
+      }
+    } on AiServiceException catch (error) {
+      await transcriber.dispose();
+      await _transcriptSub?.cancel();
+      _transcriptSub = null;
+      await _transcriberErrorSub?.cancel();
+      _transcriberErrorSub = null;
+      _pipelineError = error.message;
+      rethrow;
+    }
+  }
+
+  /// Drops to the local recogniser when a cloud backend cannot serve the call.
+  ///
+  /// Sitting throttled is never the right answer when a free, quota-free
+  /// backend is already on the machine. Once per session, so a failing
+  /// fallback cannot loop.
+  bool _fellBackToOnDevice = false;
+
+  Future<void> _fallBackToOnDevice() async {
+    if (_fellBackToOnDevice || _disposed) return;
+    if (settings.value.transcriptionBackend ==
+        TranscriptionBackend.appleOnDevice) {
+      return;
+    }
+    _fellBackToOnDevice = true;
+
+    await settings.mutate(
+      (XpSettings s) =>
+          s.copyWith(transcriptionBackend: TranscriptionBackend.appleOnDevice),
     );
 
-    await transcriber.start();
-    _transcriber = transcriber;
+    try {
+      await _startTranscriber();
+      _pipelineError = null;
+      _setBanner(
+        'Cloud transcription was rate limited — switched to on-device. '
+        'Free, and no quota.',
+        isError: false,
+      );
+      _setStatus(_listening ? HudStatus.listening : HudStatus.idle);
+    } on AiServiceException catch (error) {
+      _pipelineError = error.message;
+      _setBanner(error.message, isError: true);
+    }
   }
 
   Future<void> _disposeTranscriber() async {
@@ -303,8 +444,10 @@ class HudController extends ChangeNotifier {
     // Cheap level meter: decay fast enough to look live, slow enough to read.
     if (frame.source == AudioSource.mic) {
       _micLevel = _decay(_micLevel, frame.rms);
+      _micFrames++;
     } else {
       _systemLevel = _decay(_systemLevel, frame.rms);
+      _systemFrames++;
     }
 
     switch (event) {
@@ -315,6 +458,7 @@ class HudController extends ChangeNotifier {
       case VadSpeechEnd(segment: final SpeechSegment segment):
         // Every segment is one API request. The user's own speech is optional
         // context; the interviewer's is what actually drives an answer.
+        _segments++;
         if (segment.source == AudioSource.system ||
             settings.value.transcribeMic) {
           _transcriber?.pushSegment(segment);
@@ -351,6 +495,7 @@ class HudController extends ChangeNotifier {
       return;
     }
 
+    _transcripts++;
     final int pendingIndex = _transcript.lastIndexWhere(
       (TranscriptSegment s) => s.source == event.source && !s.isFinal,
     );
@@ -764,6 +909,7 @@ class HudController extends ChangeNotifier {
     }
 
     turn.wasHeard = heard;
+    _answers++;
     _current = turn;
     _pendingText.clear();
     _setStatus(HudStatus.thinking);
@@ -966,6 +1112,12 @@ class HudController extends ChangeNotifier {
 
     _micVad.reset();
     _systemVad.reset();
+    _systemFrames = 0;
+    _micFrames = 0;
+    _segments = 0;
+    _transcripts = 0;
+    _answers = 0;
+    _pipelineError = null;
 
     _setBanner('Context cleared.', isError: false);
     _setStatus(_listening ? HudStatus.listening : HudStatus.idle);

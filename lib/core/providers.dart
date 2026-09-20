@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/hud/controllers/hud_controller.dart';
 import 'services/audio_capture_service.dart';
 import 'services/gemini_service.dart';
+import 'services/native_speech_service.dart';
 import 'services/nvidia_nim_service.dart';
 import 'services/portfolio_importer.dart';
 import 'services/profile_service.dart';
@@ -64,6 +65,13 @@ final Provider<HotkeyService> hotkeyServiceProvider = Provider<HotkeyService>((
   return service;
 });
 
+final Provider<NativeSpeechService> nativeSpeechServiceProvider =
+    Provider<NativeSpeechService>((Ref ref) {
+      final NativeSpeechService service = NativeSpeechService();
+      ref.onDispose(service.dispose);
+      return service;
+    });
+
 final Provider<GeminiService> geminiServiceProvider = Provider<GeminiService>(
   (Ref ref) => GeminiService(),
 );
@@ -83,5 +91,6 @@ final ChangeNotifierProvider<HudController> hudControllerProvider =
         nim: ref.watch(nvidiaNimServiceProvider),
         profile: ref.watch(profileServiceProvider),
         portfolio: ref.watch(portfolioImporterProvider),
+        speech: ref.watch(nativeSpeechServiceProvider),
       );
     });

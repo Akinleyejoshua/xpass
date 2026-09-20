@@ -17,7 +17,9 @@ String runChunked(String input, int size) {
   final ReasoningFilter filter = ReasoningFilter();
   final StringBuffer out = StringBuffer();
   for (int i = 0; i < input.length; i += size) {
-    out.write(filter.add(input.substring(i, (i + size).clamp(0, input.length))));
+    out.write(
+      filter.add(input.substring(i, (i + size).clamp(0, input.length))),
+    );
   }
   out.write(filter.flush());
   return out.toString();
@@ -26,7 +28,8 @@ String runChunked(String input, int size) {
 void main() {
   group('tagged reasoning', () {
     test('removes a think block and keeps the answer', () {
-      const String input = '<think>The user wants X. Let me consider.</think>'
+      const String input =
+          '<think>The user wants X. Let me consider.</think>'
           'Use a min-heap; O(n log k).';
       expect(runCharwise(input), 'Use a min-heap; O(n log k).');
     });
@@ -61,7 +64,8 @@ void main() {
     });
 
     test('passes a clean answer through untouched', () {
-      const String input = '## Verbal Summary\nUse a sliding window.\n\n'
+      const String input =
+          '## Verbal Summary\nUse a sliding window.\n\n'
           '## Production Code\n```python\nx = 1\n```';
       expect(runCharwise(input), input);
       expect(ReasoningFilter().removedReasoning, isFalse);
@@ -70,7 +74,8 @@ void main() {
 
   group('untagged preamble', () {
     test('discards the monologue this actually produced in the field', () {
-      const String input = "Here's a thinking process:\n\n"
+      const String input =
+          "Here's a thinking process:\n\n"
           '1. Analyze User Input\n'
           '   - User is roleplaying a candidate.\n'
           '2. Check Facts for Relevant Information\n';
@@ -107,7 +112,8 @@ void main() {
     });
 
     test('a first-person STAR answer survives intact', () {
-      const String input = 'I owned the move from MongoDB to Postgres. '
+      const String input =
+          'I owned the move from MongoDB to Postgres. '
           'I mapped the schema, then cut over behind a flag. '
           'Query p99 dropped from 900ms to 120ms.';
       expect(runCharwise(input), input);
@@ -132,7 +138,8 @@ void main() {
 
   group('combined', () {
     test('tag then preamble then answer', () {
-      const String input = '<think>internal</think>'
+      const String input =
+          '<think>internal</think>'
           "Here's a thinking process: 1. consider";
       final ReasoningFilter filter = ReasoningFilter();
       final String out = filter.add(input) + filter.flush();

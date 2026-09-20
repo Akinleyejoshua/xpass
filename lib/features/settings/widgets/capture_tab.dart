@@ -26,6 +26,9 @@ class CaptureTab extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
       children: <Widget>[
         if (!hud.hasScreenPermission) const _PermissionCard(),
+        if (!hud.speechReady &&
+            config.transcriptionBackend == TranscriptionBackend.appleOnDevice)
+          const _SpeechPermissionCard(),
 
         SettingsSection(
           title: 'AUDIO SOURCES',
@@ -72,9 +75,14 @@ class CaptureTab extends ConsumerWidget {
           children: <Widget>[
             SettingsRow(
               label: 'Backend',
-              hint: config.transcriptionBackend.name == 'geminiBatch'
-                  ? 'One request per utterance — most reliable'
-                  : 'Streaming',
+              hint: switch (config.transcriptionBackend) {
+                TranscriptionBackend.appleOnDevice =>
+                  'Runs on this Mac. No key, no quota, nothing leaves the device.',
+                TranscriptionBackend.geminiBatch =>
+                  'One cloud request per utterance — counts against your quota',
+                TranscriptionBackend.geminiLive => 'Streaming cloud socket',
+                TranscriptionBackend.rivaNim => 'Your own NIM container',
+              },
               child: XpDropdown<TranscriptionBackend>(
                 value: config.transcriptionBackend,
                 items: TranscriptionBackend.values,
@@ -94,20 +102,22 @@ class CaptureTab extends ConsumerWidget {
                     update((XpSettings s) => s.copyWith(transcribeMic: v)),
               ),
             ),
-            SettingsRow(
-              label: 'Requests per minute',
-              hint: 'Keep below your plan\'s limit so screen solves still fit',
-              child: XpSlider(
-                value: config.transcriptionRpm.toDouble(),
-                min: 2,
-                max: 60,
-                divisions: 29,
-                format: (double v) => '${v.round()}/min',
-                onChanged: (double v) => update(
-                  (XpSettings s) => s.copyWith(transcriptionRpm: v.round()),
+            if (config.transcriptionNeedsGeminiKey)
+              SettingsRow(
+                label: 'Requests per minute',
+                hint:
+                    'Keep below your plan\'s limit so screen solves still fit',
+                child: XpSlider(
+                  value: config.transcriptionRpm.toDouble(),
+                  min: 2,
+                  max: 60,
+                  divisions: 29,
+                  format: (double v) => '${v.round()}/min',
+                  onChanged: (double v) => update(
+                    (XpSettings s) => s.copyWith(transcriptionRpm: v.round()),
+                  ),
                 ),
               ),
-            ),
             if (config.transcriptionBackend == TranscriptionBackend.geminiBatch)
               SettingsRow(
                 label: 'Speech-to-text model',
@@ -265,6 +275,68 @@ class _PermissionCard extends ConsumerWidget {
                     ref.read(screenCaptureServiceProvider).openSystemSettings(),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// On-device transcription needs Speech Recognition. Without it the level
+/// meters still move but no words ever arrive, which is a confusing place to
+/// be mid-call.
+class _SpeechPermissionCard extends ConsumerWidget {
+  const _SpeechPermissionCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: XpColors.accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: XpColors.accent.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(
+                Icons.record_voice_over_outlined,
+                size: 14,
+                color: XpColors.accentHover,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'Speech Recognition permission required',
+                style: XpType.body.copyWith(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'On-device transcription needs it. Nothing is uploaded — this is '
+            'the recogniser built into macOS, and it runs locally whenever the '
+            'language model is installed.',
+            style: XpType.bodyMuted.copyWith(fontSize: 11.5),
+          ),
+          const SizedBox(height: 10),
+          XpButton(
+            label: 'Grant',
+            icon: Icons.lock_open_rounded,
+            onTap: () async {
+              await ref
+                  .read(nativeSpeechServiceProvider)
+                  .requestAuthorization();
+              final HudController hud = ref.read(hudControllerProvider);
+              await hud.stopListening();
+              await hud.startListening();
+            },
           ),
         ],
       ),

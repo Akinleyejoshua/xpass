@@ -14,4 +14,12 @@ abstract final class XpChannels {
 
   /// `macos/Runner/GlobalHotkeyBridge.swift`
   static const MethodChannel hotkeys = MethodChannel('com.xpass.app/hotkeys');
+
+  /// `macos/Runner/SpeechRecognitionBridge.swift`
+  static const MethodChannel speech = MethodChannel('com.xpass.app/speech');
+
+  /// Partial and final transcripts from the on-device recogniser.
+  static const EventChannel speechEvents = EventChannel(
+    'com.xpass.app/speech_events',
+  );
 }

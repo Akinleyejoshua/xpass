@@ -4,6 +4,7 @@ import CoreGraphics
 import CoreMedia
 import FlutterMacOS
 import ScreenCaptureKit
+import Security
 
 // MARK: - PCM conversion
 
@@ -94,7 +95,10 @@ final class MicrophoneTap {
   private let converter = PCMConverter()
   private var running = false
 
-  func start(onFrame: @escaping (Data, Double) -> Void) throws {
+  func start(
+    onFrame: @escaping (Data, Double) -> Void,
+    onBuffer: ((AVAudioPCMBuffer, Double) -> Void)? = nil
+  ) throws {
     guard !running else { return }
 
     let input = engine.inputNode
@@ -111,7 +115,11 @@ final class MicrophoneTap {
     let bufferSize = AVAudioFrameCount(format.sampleRate / 10)
     input.installTap(onBus: 0, bufferSize: bufferSize, format: format) { [weak self] buffer, _ in
       guard let self, let pcm = self.converter.convert(buffer) else { return }
-      onFrame(pcm, PCMConverter.rms(of: pcm))
+      let level = PCMConverter.rms(of: pcm)
+      onFrame(pcm, level)
+      // The Speech framework wants the native buffer, not our downsampled
+      // bytes, so hand it through untouched.
+      onBuffer?(buffer, level)
     }
 
     engine.prepare()
@@ -144,16 +152,19 @@ final class SystemAudioTap: NSObject, SCStreamOutput, SCStreamDelegate {
   private let sampleQueue = DispatchQueue(label: "ai.xpass.systemaudio", qos: .userInitiated)
   private var onFrame: ((Data, Double) -> Void)?
   private var onError: ((String) -> Void)?
+  private var onBuffer: ((AVAudioPCMBuffer, Double) -> Void)?
 
   var isRunning: Bool { stream != nil }
 
   func start(
     onFrame: @escaping (Data, Double) -> Void,
-    onError: @escaping (String) -> Void
+    onError: @escaping (String) -> Void,
+    onBuffer: ((AVAudioPCMBuffer, Double) -> Void)? = nil
   ) async throws {
     guard stream == nil else { return }
     self.onFrame = onFrame
     self.onError = onError
+    self.onBuffer = onBuffer
 
     let content = try await SCShareableContent.excludingDesktopWindows(
       false,
@@ -200,6 +211,7 @@ final class SystemAudioTap: NSObject, SCStreamOutput, SCStreamDelegate {
     try? await stream.stopCapture()
     onFrame = nil
     onError = nil
+    onBuffer = nil
   }
 
   // MARK: SCStreamOutput
@@ -224,7 +236,9 @@ final class SystemAudioTap: NSObject, SCStreamOutput, SCStreamDelegate {
         ),
         let pcm = converter.convert(buffer)
       else { return }
-      onFrame?(pcm, PCMConverter.rms(of: pcm))
+      let level = PCMConverter.rms(of: pcm)
+      onFrame?(pcm, level)
+      onBuffer?(buffer, level)
     }
   }
 
@@ -501,6 +515,11 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
   private weak var hostWindow: NSWindow?
 
   private var eventSink: FlutterEventSink?
+
+  /// Set by MainFlutterWindow. When on-device transcription is running, every
+  /// captured buffer is handed to it as well as to Dart.
+  weak var speech: SpeechRecognitionBridge?
+
   private let micTap = MicrophoneTap()
   private var systemTapStorage: AnyObject?
 
@@ -588,6 +607,21 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
       AVCaptureDevice.requestAccess(for: .audio) { granted in
         DispatchQueue.main.async { result(granted) }
       }
+
+    case "launchDiagnostics":
+      // macOS attributes privacy permissions to the *responsible* process. An
+      // app exec'd from a shell inherits the terminal as responsible, so TCC
+      // reads the terminal's Info.plist and checks the terminal's grants —
+      // which is why a `flutter run` build both ignores an existing Screen
+      // Recording grant and gets killed outright for a "missing" usage
+      // description it actually has. A bundle launched by launchd is
+      // responsible for itself.
+      result([
+        "launchedByLaunchd": getppid() == 1,
+        "parentPid": Int(getppid()),
+        "bundlePath": Bundle.main.bundlePath,
+        "isAdhocSigned": MediaBridge.isAdhocSigned(),
+      ])
 
     case "openScreenRecordingSettings":
       let url = URL(
@@ -693,14 +727,40 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
     }
   }
 
+  /// An ad-hoc signature changes on every rebuild, and TCC keys grants on the
+  /// signature — so each build looks like a different app and has to be
+  /// re-authorised.
+  static func isAdhocSigned() -> Bool {
+    var code: SecStaticCode?
+    guard
+      SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &code) == errSecSuccess,
+      let code
+    else { return false }
+
+    var info: CFDictionary?
+    guard
+      SecCodeCopySigningInformation(code, SecCSFlags(rawValue: 0), &info) == errSecSuccess,
+      let signing = info as? [String: Any]
+    else { return false }
+
+    // A Developer ID / Apple Development signature carries a team identifier;
+    // an ad-hoc one does not.
+    return signing["teamid"] == nil
+  }
+
   private func startAudio(mic: Bool, system: Bool, result: @escaping FlutterResult) {
     var started: [String: Any] = ["mic": false, "system": false]
 
     if mic {
       do {
-        try micTap.start { [weak self] pcm, rms in
-          self?.emit(source: "mic", pcm: pcm, rms: rms)
-        }
+        try micTap.start(
+          onFrame: { [weak self] pcm, rms in
+            self?.emit(source: "mic", pcm: pcm, rms: rms)
+          },
+          onBuffer: { [weak self] buffer, rms in
+            self?.speech?.append(buffer: buffer, rms: rms, source: "mic")
+          }
+        )
         started["mic"] = true
       } catch {
         started["micError"] = error.localizedDescription
@@ -733,6 +793,9 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
           },
           onError: { [weak self] message in
             self?.emitError(source: "system", message: message)
+          },
+          onBuffer: { [weak self] buffer, rms in
+            self?.speech?.append(buffer: buffer, rms: rms, source: "system")
           }
         )
         outcome["system"] = true

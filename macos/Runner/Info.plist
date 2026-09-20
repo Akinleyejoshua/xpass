@@ -36,5 +36,7 @@
 	<string>xpass listens to your microphone and system audio so it can transcribe the conversation and answer in real time.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>xpass transcribes the conversation on this Mac so it can answer questions in real time. Recognition runs on-device when the language model is installed.</string>
 </dict>
 </plist>

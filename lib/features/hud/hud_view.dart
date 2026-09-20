@@ -273,6 +273,9 @@ class _EmptyState extends ConsumerWidget {
           const _ShortcutRow(keys: '⌘⌥⌫', label: 'Clear context and reset'),
 
           const SizedBox(height: 14),
+          if (!hud.launch.launchedByLaunchd) const _LaunchWarning(),
+          const _PipelineReadout(),
+          const SizedBox(height: 14),
           Wrap(
             spacing: 6,
             runSpacing: 6,
@@ -391,6 +394,250 @@ class _Banner extends StatelessWidget {
             iconSize: 11,
             onTap: onDismiss,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pipeline readout
+// ---------------------------------------------------------------------------
+
+/// Live count for each stage between the call and an answer.
+///
+/// Silence is the worst failure mode for a tool used under pressure: if the
+/// HUD shows nothing, there is no way to tell whether the audio never arrived,
+/// the speech was never detected, the transcription failed, or the model did.
+/// This names the stage that stalled.
+class _PipelineReadout extends ConsumerWidget {
+  const _PipelineReadout();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final HudController hud = ref.watch(hudControllerProvider);
+
+    final List<({String label, int value, String stalled})> stages =
+        <({String label, int value, String stalled})>[
+          (
+            label: 'Audio in',
+            value: hud.systemFrames + hud.micFrames,
+            stalled:
+                'No audio at all. Start listening, and grant Screen Recording '
+                'then relaunch.',
+          ),
+          (
+            label: 'Them heard',
+            value: hud.systemFrames,
+            stalled:
+                'Nothing from system audio. Check the call is playing through '
+                'this Mac and that Screen Recording is granted.',
+          ),
+          (
+            label: 'Speech detected',
+            value: hud.speechSegments,
+            stalled:
+                'Audio is arriving but reads as silence. Turn the call volume '
+                'up.',
+          ),
+          (
+            label: 'Transcribed',
+            value: hud.transcriptLines,
+            stalled:
+                'Speech detected but nothing came back. Usually a missing or '
+                'rejected Gemini key, or a rate limit.',
+          ),
+          (
+            label: 'Answered',
+            value: hud.answersStarted,
+            stalled:
+                'Transcribed, but nothing read as a question. Type it into '
+                'the ask box instead.',
+          ),
+        ];
+
+    // The first empty stage whose predecessor has data is where it broke.
+    int stalledAt = -1;
+    for (int i = 0; i < stages.length; i++) {
+      if (stages[i].value == 0 && (i == 0 || stages[i - 1].value > 0)) {
+        stalledAt = i;
+        break;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 10),
+      decoration: BoxDecoration(
+        color: XpColors.panel,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: XpColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('LISTEN PIPELINE', style: XpType.label),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              for (int i = 0; i < stages.length; i++) ...<Widget>[
+                if (i > 0)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 12,
+                      color: XpColors.textTertiary,
+                    ),
+                  ),
+                _Stage(
+                  label: stages[i].label,
+                  value: stages[i].value,
+                  isStall: i == stalledAt,
+                ),
+              ],
+            ],
+          ),
+          if (stalledAt >= 0) ...<Widget>[
+            const SizedBox(height: 9),
+            Text(
+              stages[stalledAt].stalled,
+              style: XpType.bodyMuted.copyWith(
+                fontSize: 11,
+                height: 1.45,
+                color: XpColors.statusThinking,
+              ),
+            ),
+          ],
+          if (hud.pipelineError != null) ...<Widget>[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 12,
+                  color: XpColors.statusMuted,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    hud.pipelineError!,
+                    style: XpType.bodyMuted.copyWith(
+                      fontSize: 11,
+                      height: 1.45,
+                      color: XpColors.statusMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Stage extends StatelessWidget {
+  const _Stage({
+    required this.label,
+    required this.value,
+    required this.isStall,
+  });
+
+  final String label;
+  final int value;
+  final bool isStall;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color tone = isStall
+        ? XpColors.statusMuted
+        : value > 0
+        ? XpColors.statusLive
+        : XpColors.textTertiary;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          value > 999 ? '${(value / 1000).toStringAsFixed(1)}k' : '$value',
+          style: XpType.metric.copyWith(
+            fontSize: 13,
+            color: tone,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 1),
+        Text(label, style: XpType.label.copyWith(fontSize: 8, color: tone)),
+      ],
+    );
+  }
+}
+
+/// Shown when the app was exec'd from a terminal rather than launched by
+/// launchd, which silently breaks every macOS privacy permission.
+class _LaunchWarning extends ConsumerWidget {
+  const _LaunchWarning();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final HudController hud = ref.watch(hudControllerProvider);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: XpColors.statusMuted.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: XpColors.statusMuted.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(
+                Icons.terminal_rounded,
+                size: 14,
+                color: XpColors.statusMuted,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'Launched from a terminal — permissions will not work',
+                style: XpType.body.copyWith(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'macOS applies privacy permissions to whichever process launched '
+            'this one. Screen Recording will read as denied however many times '
+            'you grant it, and asking for Speech Recognition will terminate '
+            'xpass. Quit and relaunch the bundle directly:',
+            style: XpType.bodyMuted.copyWith(fontSize: 11.5, height: 1.45),
+          ),
+          const SizedBox(height: 7),
+          SelectableText(
+            'open ${hud.launch.bundlePath}',
+            style: XpType.code.copyWith(fontSize: 11),
+          ),
+          if (hud.launch.isAdhocSigned) ...<Widget>[
+            const SizedBox(height: 7),
+            Text(
+              'This build is ad-hoc signed, so its identity changes every '
+              'rebuild and macOS asks for permissions again each time. Sign '
+              'with an Apple Development certificate to make them stick.',
+              style: XpType.bodyMuted.copyWith(
+                fontSize: 11,
+                height: 1.45,
+                color: XpColors.textTertiary,
+              ),
+            ),
+          ],
         ],
       ),
     );

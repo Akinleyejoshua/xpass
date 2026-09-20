@@ -11,6 +11,7 @@ import '../models/audio_models.dart';
 import '../utils/rate_limiter.dart';
 import '../utils/wav.dart';
 import 'gemini_service.dart';
+import 'native_speech_service.dart';
 import 'settings_service.dart';
 
 /// A transcript update from any backend.
@@ -28,12 +29,24 @@ class TranscriptEvent {
   final bool isFinal;
 }
 
+/// Something went wrong inside a backend.
+class TranscriberIssue {
+  const TranscriberIssue(this.message, {this.requiresFallback = false});
+
+  final String message;
+
+  /// True when this backend cannot serve the session as configured and will
+  /// not recover by itself — exhausted quota, a rejected key, a dead socket.
+  /// The caller should switch backends rather than keep retrying.
+  final bool requiresFallback;
+}
+
 /// Common shape for every speech-to-text backend.
 abstract class Transcriber {
   Stream<TranscriptEvent> get events;
 
-  /// Errors worth telling the user about (auth, quota, socket death).
-  Stream<String> get errors;
+  /// Failures worth telling the user about (auth, quota, socket death).
+  Stream<TranscriberIssue> get errors;
 
   Future<void> start();
 
@@ -82,7 +95,8 @@ class GeminiBatchTranscriber extends Transcriber {
 
   final StreamController<TranscriptEvent> _events =
       StreamController<TranscriptEvent>.broadcast();
-  final StreamController<String> _errors = StreamController<String>.broadcast();
+  final StreamController<TranscriberIssue> _errors =
+      StreamController<TranscriberIssue>.broadcast();
   final List<SpeechSegment> _queue = <SpeechSegment>[];
 
   int _inFlight = 0;
@@ -93,7 +107,7 @@ class GeminiBatchTranscriber extends Transcriber {
   Stream<TranscriptEvent> get events => _events.stream;
 
   @override
-  Stream<String> get errors => _errors.stream;
+  Stream<TranscriberIssue> get errors => _errors.stream;
 
   @override
   Future<void> start() async {}
@@ -153,17 +167,28 @@ class GeminiBatchTranscriber extends Transcriber {
         // Drop the backlog: by the time the penalty lifts it is stale anyway.
         _queue.clear();
         if (!_disposed && !_errors.isClosed) {
+          // Once is bad luck; twice means this key cannot keep up with the
+          // conversation and no amount of waiting will change that.
           _errors.add(
-            'Transcription rate limited — pausing ${seconds}s. '
-            'Lower "requests per minute" in Settings, or turn off '
-            'microphone transcription.',
+            TranscriberIssue(
+              'Transcription rate limited — paused ${seconds}s.',
+              requiresFallback: _consecutive429s >= 2,
+            ),
           );
         }
       } else if (!_disposed && !_errors.isClosed) {
-        _errors.add(error.message);
+        _errors.add(
+          TranscriberIssue(
+            error.message,
+            requiresFallback:
+                error.statusCode == 401 || error.statusCode == 403,
+          ),
+        );
       }
     } catch (error) {
-      if (!_disposed && !_errors.isClosed) _errors.add(error.toString());
+      if (!_disposed && !_errors.isClosed) {
+        _errors.add(TranscriberIssue(error.toString()));
+      }
     } finally {
       _inFlight--;
       if (!_disposed) _drain();
@@ -206,7 +231,8 @@ class RivaNimTranscriber extends Transcriber {
 
   final StreamController<TranscriptEvent> _events =
       StreamController<TranscriptEvent>.broadcast();
-  final StreamController<String> _errors = StreamController<String>.broadcast();
+  final StreamController<TranscriberIssue> _errors =
+      StreamController<TranscriberIssue>.broadcast();
   final List<SpeechSegment> _queue = <SpeechSegment>[];
   final http.Client _client = http.Client();
 
@@ -217,7 +243,7 @@ class RivaNimTranscriber extends Transcriber {
   Stream<TranscriptEvent> get events => _events.stream;
 
   @override
-  Stream<String> get errors => _errors.stream;
+  Stream<TranscriberIssue> get errors => _errors.stream;
 
   @override
   Future<void> start() async {}
@@ -286,10 +312,26 @@ class RivaNimTranscriber extends Transcriber {
         ),
       );
     } on AiServiceException catch (error) {
-      if (!_disposed && !_errors.isClosed) _errors.add(error.message);
+      if (!_disposed && !_errors.isClosed) {
+        _errors.add(
+          TranscriberIssue(
+            error.message,
+            requiresFallback:
+                error.statusCode == 401 ||
+                error.statusCode == 403 ||
+                error.statusCode == 429,
+          ),
+        );
+      }
     } catch (error) {
       if (!_disposed && !_errors.isClosed) {
-        _errors.add('Riva NIM unreachable at $baseUrl — $error');
+        // The container is not answering; nothing here will fix that.
+        _errors.add(
+          TranscriberIssue(
+            'Riva NIM unreachable at $baseUrl — $error',
+            requiresFallback: true,
+          ),
+        );
       }
     } finally {
       _inFlight--;
@@ -331,7 +373,8 @@ class GeminiLiveTranscriber extends Transcriber {
 
   final StreamController<TranscriptEvent> _events =
       StreamController<TranscriptEvent>.broadcast();
-  final StreamController<String> _errors = StreamController<String>.broadcast();
+  final StreamController<TranscriberIssue> _errors =
+      StreamController<TranscriberIssue>.broadcast();
   final Map<AudioSource, _LiveSession> _sessions =
       <AudioSource, _LiveSession>{};
 
@@ -341,7 +384,7 @@ class GeminiLiveTranscriber extends Transcriber {
   Stream<TranscriptEvent> get events => _events.stream;
 
   @override
-  Stream<String> get errors => _errors.stream;
+  Stream<TranscriberIssue> get errors => _errors.stream;
 
   @override
   Future<void> start() async {
@@ -354,7 +397,9 @@ class GeminiLiveTranscriber extends Transcriber {
           if (!_disposed && !_events.isClosed) _events.add(event);
         },
         onError: (String message) {
-          if (!_disposed && !_errors.isClosed) _errors.add(message);
+          if (!_disposed && !_errors.isClosed) {
+            _errors.add(TranscriberIssue(message, requiresFallback: true));
+          }
         },
       );
       _sessions[source] = session;
@@ -547,6 +592,107 @@ class _LiveSession {
 }
 
 // ---------------------------------------------------------------------------
+// Apple Speech, on-device
+// ---------------------------------------------------------------------------
+
+/// Transcribes with the recogniser built into macOS.
+///
+/// The default backend. It needs no API key, makes no network request per
+/// sentence, has no per-minute quota, and keeps the audio on the machine.
+/// Endpointing happens natively, so this backend ignores both raw frames and
+/// VAD segments — it is fed directly from the capture taps in Swift.
+class NativeSpeechTranscriber extends Transcriber {
+  NativeSpeechTranscriber({
+    required this.speech,
+    required this.sources,
+    this.locale = 'en-US',
+  });
+
+  final NativeSpeechService speech;
+
+  /// Which capture paths get a recogniser.
+  final List<AudioSource> sources;
+  final String locale;
+
+  final StreamController<TranscriptEvent> _events =
+      StreamController<TranscriptEvent>.broadcast();
+  final StreamController<TranscriberIssue> _errors =
+      StreamController<TranscriberIssue>.broadcast();
+
+  StreamSubscription<NativeSpeechEvent>? _eventSub;
+  StreamSubscription<String>? _errorSub;
+  bool _disposed = false;
+
+  /// False when the language pack is missing and Apple fell back to its
+  /// server-side recogniser.
+  bool onDevice = false;
+
+  @override
+  Stream<TranscriptEvent> get events => _events.stream;
+
+  @override
+  Stream<TranscriberIssue> get errors => _errors.stream;
+
+  @override
+  Future<void> start() async {
+    if (!await speech.isAvailable()) {
+      throw const AiServiceException(
+        'No speech recogniser available for this language.',
+        provider: 'macOS Speech',
+      );
+    }
+
+    final SpeechAuthorization status = await speech.authorizationStatus();
+    if (!status.isGranted) {
+      final bool granted = await speech.requestAuthorization();
+      if (!granted) {
+        throw const AiServiceException(
+          'Speech Recognition permission denied. Enable xpass under '
+          'Privacy & Security › Speech Recognition.',
+          provider: 'macOS Speech',
+        );
+      }
+    }
+
+    _eventSub = speech.events.listen((NativeSpeechEvent event) {
+      if (_disposed || _events.isClosed) return;
+      if (event.text.trim().isEmpty) return;
+      _events.add(
+        TranscriptEvent(
+          source: AudioSource.fromName(event.source),
+          text: event.text.trim(),
+          isFinal: event.isFinal,
+        ),
+      );
+    });
+
+    _errorSub = speech.errors.listen((String message) {
+      if (!_disposed && !_errors.isClosed) {
+        _errors.add(TranscriberIssue(message));
+      }
+    });
+
+    final SpeechStartResult result = await speech.start(
+      sources: sources.map((AudioSource s) => s.name).toList(),
+      locale: locale,
+    );
+    onDevice = result.onDevice;
+  }
+
+  @override
+  Future<void> dispose() async {
+    _disposed = true;
+    await _eventSub?.cancel();
+    _eventSub = null;
+    await _errorSub?.cancel();
+    _errorSub = null;
+    await speech.stop();
+    await _events.close();
+    await _errors.close();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 
@@ -555,8 +701,18 @@ Transcriber buildTranscriber({
   required TranscriptionBackend backend,
   required XpSettings settings,
   required GeminiService gemini,
+  required NativeSpeechService speech,
 }) {
   switch (backend) {
+    case TranscriptionBackend.appleOnDevice:
+      return NativeSpeechTranscriber(
+        speech: speech,
+        sources: <AudioSource>[
+          if (settings.micEnabled && settings.transcribeMic) AudioSource.mic,
+          if (settings.systemAudioEnabled) AudioSource.system,
+        ],
+        locale: settings.speechLocale,
+      );
     case TranscriptionBackend.geminiLive:
       return GeminiLiveTranscriber(
         apiKey: settings.geminiApiKey,

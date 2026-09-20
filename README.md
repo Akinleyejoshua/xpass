@@ -11,8 +11,33 @@ Built with Flutter + native AppKit / ScreenCaptureKit. macOS 13 or newer.
 
 ```bash
 flutter pub get
-flutter run -d macos          # or: flutter build macos --release
+./run.sh                      # build + launch correctly
+./run.sh --attach             # same, plus hot reload
+./run.sh --release
 ```
+
+### Do not use `flutter run` for anything that touches audio or the screen
+
+This is not a style preference — it breaks the app.
+
+macOS applies privacy permissions to the **responsible process**, which is
+whichever process launched yours. `flutter run` execs the binary as a child of
+your terminal, so macOS evaluates the *terminal's* permissions instead of
+xpass's:
+
+- Screen Recording reads as denied no matter how many times you grant it to
+  xpass, because TCC is checking your terminal;
+- requesting Speech Recognition reads the *terminal's* `Info.plist`, finds no
+  `NSSpeechRecognitionUsageDescription`, and **terminates xpass** — the app
+  appears to open and immediately close.
+
+`open`ing the bundle makes launchd responsible, and xpass is judged on its own
+permissions. That is all `run.sh` does. For hot reload, `run.sh --attach`
+launches the bundle properly and then runs `flutter attach`.
+
+xpass detects this itself: launched from a terminal, it says so in the panel
+rather than failing in four confusing ways, and refuses to make the request
+that would kill it.
 
 No CocoaPods — every dependency is a Swift Package.
 
@@ -21,6 +46,17 @@ If macOS refuses to attach a debugger, enable Developer Mode once:
 ```bash
 sudo DevToolsSecurity -enable
 ```
+
+### Signing, so permissions stick
+
+A default Flutter build is **ad-hoc signed**, and TCC keys grants to the code
+signature — which changes on every rebuild. Every build is therefore a new app
+to macOS, and Screen Recording has to be granted again each time.
+
+To stop that, open `macos/Runner.xcodeproj` in Xcode, select the Runner target
+› Signing & Capabilities, and pick your Apple ID team. An Apple Development
+certificate gives the bundle a stable identity and the grants persist. The
+panel tells you when the running build is ad-hoc signed.
 
 `flutter doctor` may warn about CocoaPods and iOS simulator runtimes. Neither
 affects this project; it is macOS-desktop only and CocoaPods-free.
@@ -31,12 +67,14 @@ affects this project; it is macOS-desktop only and CocoaPods-free.
 
 ### Keys
 
-Either paste them under **Settings › Models**, or export them and skip the UI:
+Transcription needs **no key** — it runs on this Mac. Keys are only for answers:
 
 ```bash
 export NVIDIA_API_KEY=nvapi-...     # spoken answers, profile answers
-export GEMINI_API_KEY=AIza...       # screen solving, transcription
+export GEMINI_API_KEY=AIza...       # screen solving only
 ```
+
+Either paste them under **Settings › Models**, or export them and skip the UI.
 
 A `.env` file works too — in the project root, next to the `.app`, or at
 `~/.xpass/.env`. Real environment variables win over the file, and anything
@@ -47,10 +85,14 @@ typed into Settings wins over both.
 | Permission | Needed for | Where |
 |---|---|---|
 | Screen Recording | screen solves **and** hearing the interviewer | Privacy & Security › Screen Recording |
+| Speech Recognition | on-device transcription | prompted on first launch |
 | Microphone | hearing yourself | prompted on first launch |
 
 macOS only applies a Screen Recording grant on a **fresh launch** — quit and
 reopen xpass after enabling it. The Capture tab has buttons for both.
+
+If Screen Recording keeps reading as denied after you granted it, check the two
+causes above: launched from a terminal, or re-signed by a rebuild.
 
 ### Check the meters
 
@@ -157,7 +199,23 @@ Stored at `~/Library/Application Support/com.xpass.app/profile.json`.
 
 ---
 
-## 5. Models
+## 5. Transcription
+
+The default backend is **Apple's Speech framework, on-device**. Dictation is a
+solved problem the OS already does locally, so xpass uses it: no API key, no
+network request per sentence, no per-minute quota, and the audio never leaves
+the machine. One recogniser per audio source, endpointed on silence, so the
+interviewer and you stay on separate transcripts.
+
+If the language pack is installed it runs fully offline; otherwise macOS falls
+back to Apple's server-side recogniser, and the Guide tab says which you got.
+
+Cloud alternatives are still selectable under **Settings › Capture** when you
+want a specific model's accuracy — Gemini per-utterance, Gemini Live, or your
+own NVIDIA Riva NIM container. Those cost a request per sentence and are what
+the rate-limit controls below exist for.
+
+## 6. Models
 
 The model dropdowns list each provider's **live catalogue**, fetched from
 `generativelanguage.googleapis.com/v1beta/models` and
@@ -172,7 +230,7 @@ silently changes it.
 
 ---
 
-## 6. If the answer looks like a monologue
+## 7. If the answer looks like a monologue
 
 Hybrid reasoning models think out loud, and some spend the whole token budget
 doing it before writing anything useful. xpass defends against this three ways:
@@ -193,9 +251,12 @@ rather than sitting blank. **Switch to a non-reasoning model** under Settings �
 Models — anything with `-instruct` or `-it` in the id is a safe bet; avoid ids
 containing `reasoning` or `thinking`.
 
-## 7. Rate limits
+## 8. Rate limits
 
-Each thing the other person says is one transcription request, so a fast
+This section applies only to the **cloud** transcription backends; the default
+on-device one has no quota at all.
+
+On a cloud backend, each thing the other person says is one request, so a fast
 exchange can outrun a free-tier quota. xpass paces requests evenly (a leaky
 bucket, because bursts are what trip limits), backs off exponentially on HTTP
 429, and drops a stale backlog rather than queueing it — an utterance that
@@ -210,7 +271,7 @@ If you still hit the limit:
 
 ---
 
-## 8. What "invisible" means
+## 9. What "invisible" means
 
 `MainFlutterWindow` sets `NSWindowSharingNone`, so the macOS compositor never
 hands the surface to a capturing client. The window is absent from the frames
@@ -224,7 +285,7 @@ that inspects running processes, or anyone watching your eyes.
 
 ---
 
-## 9. Layout
+## 10. Layout
 
 ```
 macos/Runner/
@@ -232,6 +293,7 @@ macos/Runner/
   StealthWindowBridge.swift      click-through, opacity, panic hide, geometry
   NativeAudioScreenBridge.swift  ScreenCaptureKit frames + system-audio loopback + mic
   GlobalHotkeyBridge.swift       Carbon RegisterEventHotKey
+  SpeechRecognitionBridge.swift  SFSpeechRecognizer, on-device, per source
 
 lib/core/
   constants/      colors, typography, prompt personas
@@ -250,17 +312,18 @@ Platform channels: `com.xpass.app/window`, `/media`, `/audio`, `/hotkeys`.
 
 ---
 
-## 10. Tests
+## 11. Tests
 
 ```bash
 flutter test
 ```
 
-128 tests covering the SSE parser, the VAD state machine and its noise
+146 tests covering the SSE parser, the VAD state machine and its noise
 estimator, WAV framing, profile retrieval and résumé parsing, both model
 services against mocked HTTP, the model catalogue, the portfolio importer, the
 rate limiter, question routing across the three tiers, the reasoning
-filter, and answer extraction.
+filter, transcription-backend selection, settings migration, listen-path
+resilience, and answer extraction.
 
 There is no widget-level test: mounting the full HUD tree crashes the test
 harness, and a red suite is worse than an honest gap.

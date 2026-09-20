@@ -45,6 +45,36 @@ class DisplayInfo {
       '${width.toInt()}×${height.toInt()}${isMain ? ' (main)' : ''}';
 }
 
+/// How this process was launched, which decides whether macOS privacy
+/// permissions can work at all.
+class LaunchDiagnostics {
+  const LaunchDiagnostics({
+    required this.launchedByLaunchd,
+    required this.isAdhocSigned,
+    required this.bundlePath,
+  });
+
+  /// False when the app was exec'd from a shell or IDE. macOS then treats that
+  /// parent as the "responsible process" for privacy purposes: it reads *its*
+  /// Info.plist and checks *its* grants, so xpass's own Screen Recording
+  /// permission is ignored and a missing usage description in the terminal
+  /// kills xpass outright.
+  final bool launchedByLaunchd;
+
+  /// True for an ad-hoc signature, which changes on every rebuild — so every
+  /// build looks like a new app to TCC and has to be re-authorised.
+  final bool isAdhocSigned;
+  final String bundlePath;
+
+  bool get permissionsCanPersist => launchedByLaunchd && !isAdhocSigned;
+
+  static const LaunchDiagnostics unknown = LaunchDiagnostics(
+    launchedByLaunchd: true,
+    isAdhocSigned: false,
+    bundlePath: '',
+  );
+}
+
 /// Dart-side facade over the ScreenCaptureKit half of
 /// `NativeAudioScreenBridge.swift`.
 class ScreenCaptureService {
@@ -143,6 +173,22 @@ class ScreenCaptureService {
             : error.message ?? 'Capture failed',
         provider: 'ScreenCaptureKit',
       );
+    }
+  }
+
+  /// How the process was launched — see [LaunchDiagnostics].
+  Future<LaunchDiagnostics> launchDiagnostics() async {
+    try {
+      final Map<Object?, Object?>? raw = await XpChannels.media
+          .invokeMethod<Map<Object?, Object?>>('launchDiagnostics');
+      if (raw == null) return LaunchDiagnostics.unknown;
+      return LaunchDiagnostics(
+        launchedByLaunchd: raw['launchedByLaunchd'] as bool? ?? true,
+        isAdhocSigned: raw['isAdhocSigned'] as bool? ?? false,
+        bundlePath: raw['bundlePath'] as String? ?? '',
+      );
+    } on PlatformException {
+      return LaunchDiagnostics.unknown;
     }
   }
 
