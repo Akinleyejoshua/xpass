@@ -1,0 +1,70 @@
+name: xpass
+description: "xpass - stealth macOS HUD copilot for live technical sessions."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Typography. Fonts are also bundled locally under assets/fonts so the HUD
+  # never blocks first paint on a network fetch; google_fonts stays available
+  # for the settings screen's optional font override.
+  google_fonts: ^8.2.1
+
+  # Streaming markdown rendering (prose blocks) + code syntax highlighting.
+  flutter_markdown: ^0.7.7+1
+  flutter_highlight: ^0.7.0
+
+  # NOTE: global hotkeys are handled natively (Carbon RegisterEventHotKey in
+  # macos/Runner/GlobalHotkeyBridge.swift) instead of the hotkey_manager
+  # plugin, which has no Swift Package Manager support and would drag the
+  # whole build back onto CocoaPods.
+  # Streaming HTTP / SSE client and realtime sockets.
+  http: ^1.6.0
+  web_socket_channel: ^3.0.3
+
+  # State management.
+  flutter_riverpod: ^2.6.1
+
+  # HUD dragging, sizing, positioning.
+  window_manager: ^0.5.2
+  screen_retriever: ^0.2.2
+
+  # Local persistence for API keys / prompt templates / preferences.
+  shared_preferences: ^2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/fonts/
+    - assets/profile/
+
+  fonts:
+    - family: BricolageGrotesque
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque-400.ttf
+          weight: 400
+        - asset: assets/fonts/BricolageGrotesque-500.ttf
+          weight: 500
+        - asset: assets/fonts/BricolageGrotesque-600.ttf
+          weight: 600
+        - asset: assets/fonts/BricolageGrotesque-700.ttf
+          weight: 700
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-400.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-500.ttf
+          weight: 500
+        - asset: assets/fonts/JetBrainsMono-700.ttf
+          weight: 700

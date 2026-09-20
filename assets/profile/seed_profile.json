@@ -1,0 +1,945 @@
+{
+  "version": 1,
+  "name": "Joshua Akinleye",
+  "headline": "Full Stack Developer · AI/ML Engineering · Data Analytics",
+  "summary": "I’m Joshua , a multidisciplinary technologist passionate about transforming complexity into clarity. My journey bridges three worlds: Data Analytics & Science/Web — uncovering insights, building predictive models, and translating raw data into actionable strategies. AI/ML/DL Engineering — designing intelligent systems, training deep learning architectures, and pushing the boundaries of machine learning applications. Full Stack Development — crafting scalable, user-focused applications from front-end design to back-end infrastructure. What drives me is curiosity and impact. I thrive on solving problems that matter — whether it’s optimizing workflows, automating decisions, or creating digital products that empower people. Beyond the code, I value collaboration, continuous learning, and the art of connecting ideas across disciplines. My portfolio is a reflection of that mindset: a space where data meets design, and innovation meets execution. In short: I don’t just build solutions — I engineer possibilities.",
+  "location": "Available worldwide (remote)",
+  "yearsExperience": "6+ years (since 2020)",
+  "entries": [
+    {
+      "id": "exp-695e7edd926ccba002516aac",
+      "kind": "experience",
+      "title": "Full Stack Developer",
+      "organization": "Corvendra",
+      "period": "2026 – present",
+      "summary": "",
+      "bullets": [
+        "i) Software Design & Development",
+        "ii) Front-End Engineering",
+        "iii) Back-End Development",
+        "iv) Integration, Deployment & Maintenance",
+        "v) Collaboration & Cross-Functional Support",
+        "vi) Security & Compliance"
+      ],
+      "tags": [
+        "full",
+        "stack",
+        "developer",
+        "corvendra",
+        "software",
+        "design",
+        "development",
+        "front",
+        "engineering",
+        "back",
+        "integration",
+        "deployment"
+      ]
+    },
+    {
+      "id": "exp-694aac49db3a970f9e2f0054",
+      "kind": "experience",
+      "title": "Backend Developer",
+      "organization": "BLNR (Open Source)",
+      "period": "2024 – 2025",
+      "summary": "",
+      "bullets": [
+        "Leading backend architecture and development",
+        "Contributing to open source projects",
+        "Designing scalable server-side solutions",
+        "Collaborating with IT teams to meet client expectations"
+      ],
+      "tags": [
+        "backend",
+        "developer",
+        "blnr",
+        "open",
+        "source",
+        "leading",
+        "architecture",
+        "development",
+        "contributing",
+        "projects",
+        "designing",
+        "scalable"
+      ]
+    },
+    {
+      "id": "exp-694aac49db3a970f9e2f0053",
+      "kind": "experience",
+      "title": "Conversational A.I Scientist (Data Science)",
+      "organization": "Smartecniqs",
+      "period": "2022 – 2023",
+      "summary": "",
+      "bullets": [
+        "Developed conversational AI systems",
+        "Built and trained machine learning models",
+        "Implemented NLP solutions for business applications"
+      ],
+      "tags": [
+        "conversational",
+        "scientist",
+        "data",
+        "science",
+        "smartecniqs",
+        "developed",
+        "systems",
+        "built",
+        "trained",
+        "machine",
+        "learning",
+        "models"
+      ]
+    },
+    {
+      "id": "exp-694aac49db3a970f9e2f0052",
+      "kind": "experience",
+      "title": "Full Stack Developer",
+      "organization": "Gtext",
+      "period": "2021 – 2022",
+      "summary": "",
+      "bullets": [
+        "Developed end-to-end web applications",
+        "Built RESTful APIs and managed databases",
+        "Deployed production-ready applications"
+      ],
+      "tags": [
+        "full",
+        "stack",
+        "developer",
+        "gtext",
+        "developed",
+        "applications",
+        "built",
+        "restful",
+        "apis",
+        "managed",
+        "databases",
+        "deployed"
+      ]
+    },
+    {
+      "id": "exp-694aac49db3a970f9e2f0051",
+      "kind": "experience",
+      "title": "Web Developer",
+      "organization": "C.A.C",
+      "period": "2020 – 2021",
+      "summary": "",
+      "bullets": [
+        "Designed and developed responsive web applications",
+        "Collaborated with teams to deliver client solutions",
+        "Implemented front-end interfaces using modern frameworks"
+      ],
+      "tags": [
+        "developer",
+        "c.a.c",
+        "designed",
+        "developed",
+        "responsive",
+        "applications",
+        "collaborated",
+        "with",
+        "teams",
+        "deliver",
+        "client",
+        "solutions"
+      ]
+    },
+    {
+      "id": "proj-6a9a9032e8d4419688bf12c4",
+      "kind": "project",
+      "title": "Noketa",
+      "organization": "",
+      "summary": "Emails that look good and perform. The full email stack — beautiful templates, reliable delivery, and developer-first APIs.",
+      "period": "",
+      "bullets": [
+        "Stack: NEXTJS",
+        "Live: https://noketa.netlify.app/"
+      ],
+      "tags": [
+        "nextjs",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-694c44c1d82ed0d719940067",
+      "kind": "project",
+      "title": "Appi: High-Conversion Mobile App Landing Page",
+      "organization": "",
+      "summary": "Appi is a high-performance, conversion-optimized landing page template designed to drive mobile application downloads. Built with Next.js for server-side rendering and optimal SEO, the project features a fully responsive and modern UI styled with pure CSS. It leverages TypeScript for robust type safety and integrates a lightweight Node.js backend to handle user waitlists, lead generation, and analytics tracking seamlessly.",
+      "period": "",
+      "bullets": [
+        "Stack: Next.js, TypeScript, CSS3, Node.js, React",
+        "Live: https://joshua-appi.netlify.app/"
+      ],
+      "tags": [
+        "next.js",
+        "typescript",
+        "css3",
+        "node.js",
+        "react",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-694c440fd82ed0d719940064",
+      "kind": "project",
+      "title": "SlabShot Landing Page",
+      "organization": "",
+      "summary": "Data Warehouse is a data storage area that has been tested for security, so you can store your data here safely but not be afraid of being stolen by others.",
+      "period": "",
+      "bullets": [
+        "Stack: React, CSS, JavaScript, Nextjs, TypeScript",
+        "Live: https://joshua-slabshot.netlify.app/"
+      ],
+      "tags": [
+        "react",
+        "css",
+        "javascript",
+        "nextjs",
+        "typescript",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-694c32f5447246ff66a2c555",
+      "kind": "project",
+      "title": "Church Platform / Admin Mangement Platform (Client Project)",
+      "organization": "",
+      "summary": "This is an Advanced Chuch Web Progressive Web App, with Event Management System and Admin Panel, It has LIVE features for current Events, A Gallery, Sermons Page, with Ministers Page",
+      "period": "",
+      "bullets": [
+        "Stack: Nextjs, MongoDB, Typescript",
+        "Live: https://cacmtz.vercel.app/"
+      ],
+      "tags": [
+        "nextjs",
+        "mongodb",
+        "typescript",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-6a356637e3fae8b42f108213",
+      "kind": "project",
+      "title": "Cloud Gallery: High-Performance PHP Cloud Storage Gateway",
+      "organization": "",
+      "summary": "Stratum is an enterprise-grade, lightweight Cloud Storage Gateway built in PHP that seamlessly bridges legacy on-premise applications with modern cloud object storage providers. By implementing a highly optimized PSR-7 compatible streaming architecture, Stratum solves the memory bottleneck typically associated with PHP file handling, allowing petabyte-scale data transfers with minimal memory footprints. It features a robust multi-provider adapter pattern supporting AWS S3, Google Cloud Storage, and Azure Blob, local Redis-backed metadata caching for sub-millisecond directory listings, and resilient chunked parallel uploads. This gateway enables organizations to modernize their storage infrastructure without rewriting legacy codebase dependencies, significantly reducing egress costs and operational complexity.",
+      "period": "",
+      "bullets": [
+        "Stack: PHP, HTML, CSS",
+        "Source: https://github.com/Akinleyejoshua/custom-storage-php",
+        "Live: https://media-gallery.free.nf/"
+      ],
+      "tags": [
+        "php",
+        "html",
+        "css",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-6a2b3c9a04d337a54a755f4c",
+      "kind": "project",
+      "title": "The Scribe",
+      "organization": "",
+      "summary": "An AI writing assistant purpose-built for apostolic, prophetic, and Spirit-filled ministry voices. We capture your theological voice, then generate full manuscripts in your exact style.",
+      "period": "",
+      "bullets": [
+        "Stack: Nextjs, Gemini, Nodejs",
+        "Source: https://github.com/Akinleyejoshua/the_scribe",
+        "Live: https://thescribepro.netlify.app/"
+      ],
+      "tags": [
+        "nextjs",
+        "gemini",
+        "nodejs",
+        "ml"
+      ]
+    },
+    {
+      "id": "proj-6a3b3f29ce164ecd334aed5f",
+      "kind": "project",
+      "title": "xMachine: Browser-Based Deep Learning & Inference Platform",
+      "organization": "",
+      "summary": "TensorWeb is a powerful, end-to-end AI/ML/DL web integrator designed to democratize machine learning by enabling users to import datasets, train models, and run real-time inferences directly in the browser. By leveraging client-side hardware acceleration and robust backend synchronization, the platform eliminates complex local environment setups and high cloud-compute costs. It features a comprehensive suite of tools supporting Computer Vision classification, real-time Object Detection, Natural Language Processing (NLP), Generative Adversarial Networks (GANs), and lightweight Large Language Model (LLM) training. Engineered with a highly responsive Next.js frontend, MongoDB for dataset and model metadata management, and TensorFlow/TensorFlow.js for seamless cross-platform model compilation, TensorWeb redefines the accessibility of modern deep learning workflows.",
+      "period": "",
+      "bullets": [
+        "Stack: TensorFlow.js, Next.js, MongoDB, TensorFlow, WebGPU, React, Node.js",
+        "Source: https://github.com/Akinleyejoshua/xmachine",
+        "Live: https://xmachinepro.netlify.app/",
+        "Write-up: https://joshuapro.netlify.app/blog/democratizing-deep-learning-inside-xmachine-the-webgpu-powered-browser-inference-training-platform"
+      ],
+      "tags": [
+        "tensorflow.js",
+        "next.js",
+        "mongodb",
+        "tensorflow",
+        "webgpu",
+        "react",
+        "node.js",
+        "ml"
+      ]
+    },
+    {
+      "id": "proj-6a2b3d577c9f2f83138c2e98",
+      "kind": "project",
+      "title": "Goast Coach",
+      "organization": "",
+      "summary": "Ghost Coach is an AI-powered sports coaching assistant. A player uploads a photo of their\nstance or technique, and the application analyzes it using a Vision LLM to deliver structured,\npersonalized coaching feedback.",
+      "period": "",
+      "bullets": [
+        "Stack: Nextjs, AI, Nodejs",
+        "Source: https://github.com/Akinleyejoshua/goastcoach",
+        "Live: https://ghostcoachpro.netlify.app/dashboard"
+      ],
+      "tags": [
+        "nextjs",
+        "ai",
+        "nodejs",
+        "ml"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f0056",
+      "kind": "project",
+      "title": "Blogrr - Social Media App",
+      "organization": "Featured project",
+      "summary": "A full-featured social media application with user authentication, posts, comments, likes, and real-time notifications.",
+      "period": "",
+      "bullets": [
+        "Stack: React, Node.js, MongoDB, Socket.io",
+        "Live: https://blogrpro.vercel.app/home"
+      ],
+      "tags": [
+        "react",
+        "node.js",
+        "mongodb",
+        "socket.io",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f0057",
+      "kind": "project",
+      "title": "Ultra Share Pro (WebRTC)",
+      "organization": "Featured project",
+      "summary": "Real-time file sharing application using WebRTC for peer-to-peer connections, enabling fast and secure file transfers.",
+      "period": "",
+      "bullets": [
+        "Stack: WebRTC, Next.js, Node.js, Socket.io",
+        "Source: https://github.com/Akinleyejoshua/webRTC-Nextjs/tree/main",
+        "Live: https://ultrasharepro.vercel.app/"
+      ],
+      "tags": [
+        "webrtc",
+        "next.js",
+        "node.js",
+        "socket.io",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-69eba88d341f83d76553c1a9",
+      "kind": "project",
+      "title": "Sales Analysis Dashboard",
+      "organization": "",
+      "summary": "Sales Analysis for Ecommerce Dataset",
+      "period": "",
+      "bullets": [
+        "Stack: Power BI, Excel, PowerBI, SQL, Python",
+        "Live: https://databipro.netlify.app/share/bd332f28-50d"
+      ],
+      "tags": [
+        "power bi",
+        "excel",
+        "powerbi",
+        "sql",
+        "python",
+        "data-science"
+      ]
+    },
+    {
+      "id": "proj-69e9670e55115aba310df89a",
+      "kind": "project",
+      "title": "Power BI Sales Report",
+      "organization": "",
+      "summary": "Data Visualization for Sales Report",
+      "period": "",
+      "bullets": [
+        "Stack: Excel, PowerBI, Data BI",
+        "Live: https://databipro.netlify.app/share/3c0f25f7-127"
+      ],
+      "tags": [
+        "excel",
+        "powerbi",
+        "data bi",
+        "data-science"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f005c",
+      "kind": "project",
+      "title": "Ultra GPT - Virtual HR",
+      "organization": "Featured project",
+      "summary": "AI-powered virtual HR assistant using large language models for employee queries, onboarding, and HR processes.",
+      "period": "",
+      "bullets": [
+        "Stack: Python, OpenAI, LangChain, FastAPI",
+        "Live: https://ultragpt-pro.vercel.app/"
+      ],
+      "tags": [
+        "python",
+        "openai",
+        "langchain",
+        "fastapi",
+        "ml"
+      ]
+    },
+    {
+      "id": "proj-694c487fd8dd045475d3784e",
+      "kind": "project",
+      "title": "Crypto-NFTs Collection Dapp",
+      "organization": "",
+      "summary": "A Non-Fungible-Token Dapp were you can sell JPEG documents",
+      "period": "",
+      "bullets": [
+        "Stack: Nextjs, MetaMask, ethers.js, Hardhart.js, Solidity, Remix",
+        "Source: https://github.com/Akinleyejoshua/NFTs",
+        "Live: https://crypto-nfts.vercel.app/"
+      ],
+      "tags": [
+        "nextjs",
+        "metamask",
+        "ethers.js",
+        "hardhart.js",
+        "solidity",
+        "remix",
+        "web3"
+      ]
+    },
+    {
+      "id": "proj-694c491e157d782174e495a2",
+      "kind": "project",
+      "title": "BLOCKCHAIN DAPP (ETH-TRANFER)",
+      "organization": "",
+      "summary": "54 views 23 Jul 2022\nA blockchain decentralized application review. \nTECHNOLOGIES USED:\n1. REMIX\n2. SOLIDITY\n3. ETHERS.JS\n4. REACTJS\n5. REACT-MORALIS\n6. MetaMask",
+      "period": "",
+      "bullets": [
+        "Stack: Nextjs, MetaMask, ethers.js, Hardhart.js, Solidity, Remix",
+        "Source: https://github.com/Akinleyejoshua/ethtransact",
+        "Live: https://ethtransact.vercel.app/"
+      ],
+      "tags": [
+        "nextjs",
+        "metamask",
+        "ethers.js",
+        "hardhart.js",
+        "solidity",
+        "remix",
+        "web3"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f005b",
+      "kind": "project",
+      "title": "SaaS Screen Sharing",
+      "organization": "",
+      "summary": "Software-as-a-Service application for screen sharing and remote collaboration with real-time communication.",
+      "period": "",
+      "bullets": [
+        "Stack: React, WebRTC, Node.js, Redis",
+        "Live: http://screen-view.vercel.app/"
+      ],
+      "tags": [
+        "react",
+        "webrtc",
+        "node.js",
+        "redis",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-696dea2d12ef1f15d2a2d335",
+      "kind": "project",
+      "title": "FaceBook Clone",
+      "organization": "",
+      "summary": "A Facebook Web Application Mini-Version",
+      "period": "",
+      "bullets": [
+        "Stack: Nextjs, MongoDB, Nodejs"
+      ],
+      "tags": [
+        "nextjs",
+        "mongodb",
+        "nodejs",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f0059",
+      "kind": "project",
+      "title": "Twitter/X Clone",
+      "organization": "Featured project",
+      "summary": "Full-stack Twitter clone with tweet functionality, user profiles, follow system, and real-time updates.",
+      "period": "",
+      "bullets": [
+        "Stack: React, Next.js, Express",
+        "Source: https://github.com/Akinleyejoshua/twitter-clone-client",
+        "Live: http://x-clone-client.vercel.app/"
+      ],
+      "tags": [
+        "react",
+        "next.js",
+        "express",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f005a",
+      "kind": "project",
+      "title": "WooCommerce Dropshipping Web App",
+      "organization": "",
+      "summary": "E-commerce dropshipping platform integrated with WooCommerce for seamless product management and order fulfillment.",
+      "period": "",
+      "bullets": [
+        "Stack: React, WooCommerce, PHP, MySQL, Nextjs",
+        "Source: https://github.com/Akinleyejoshua/uni-store",
+        "Live: http://uni-store.vercel.app/"
+      ],
+      "tags": [
+        "react",
+        "woocommerce",
+        "php",
+        "mysql",
+        "nextjs",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f0058",
+      "kind": "project",
+      "title": "BLNR Backend (Open Source)",
+      "organization": "Featured project",
+      "summary": "Open source backend project with robust API architecture, authentication, and database management.",
+      "period": "",
+      "bullets": [
+        "Stack: Node.js, Express, MongoDB",
+        "Live: https://blnr-dashboard-jet.vercel.app/"
+      ],
+      "tags": [
+        "node.js",
+        "express",
+        "mongodb",
+        "web"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f005d",
+      "kind": "project",
+      "title": "Covid-19 Diagnostics",
+      "organization": "Featured project",
+      "summary": "Machine learning model for COVID-19 diagnosis using medical imaging and patient data analysis.",
+      "period": "",
+      "bullets": [
+        "Stack: Python, TensorFlow, Keras, OpenCV",
+        "Live: https://j-covidtest.netlify.app/"
+      ],
+      "tags": [
+        "python",
+        "tensorflow",
+        "keras",
+        "opencv",
+        "ml"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f005e",
+      "kind": "project",
+      "title": "Facial Expression Detector V2",
+      "organization": "Featured project",
+      "summary": "Deep learning model for real-time facial expression recognition with emotion classification.",
+      "period": "",
+      "bullets": [
+        "Stack: Python, PyTorch, OpenCV, CNN, Yolo8, Tensorflow",
+        "Source: https://github.com/Akinleyejoshua/facial-analysis-yolo",
+        "Live: https://facialanalyser.netlify.app/"
+      ],
+      "tags": [
+        "python",
+        "pytorch",
+        "opencv",
+        "cnn",
+        "yolo8",
+        "tensorflow",
+        "ml"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f005f",
+      "kind": "project",
+      "title": "ChatBot Assistant",
+      "organization": "",
+      "summary": "GPT-powered chatbot for HR assistance, web scraping, and code fetching with natural language understanding.",
+      "period": "",
+      "bullets": [
+        "Stack: Python, GPT-4, LangChain, Selenium",
+        "Source: https://github.com/Akinleyejoshua/-chatbot/tree/main"
+      ],
+      "tags": [
+        "python",
+        "gpt-4",
+        "langchain",
+        "selenium",
+        "ml"
+      ]
+    },
+    {
+      "id": "proj-694aac49db3a970f9e2f0060",
+      "kind": "project",
+      "title": "LLM GPT Web Application",
+      "organization": "",
+      "summary": "Full-stack web application integrating large language models for intelligent text generation and analysis.",
+      "period": "",
+      "bullets": [
+        "Stack: React, Python, OpenAI, FastAPI",
+        "Source: https://github.com/Akinleyejoshua/llm",
+        "Live: https://ultra-gpt-llm.vercel.app/"
+      ],
+      "tags": [
+        "react",
+        "python",
+        "openai",
+        "fastapi",
+        "ml"
+      ]
+    },
+    {
+      "id": "proj-6a401ddb25ca20eea09a72c6",
+      "kind": "project",
+      "title": "NotePad: Dual-Engine Cross-Platform Note Suite",
+      "organization": "",
+      "summary": "A high-performance, offline-first note-taking ecosystem developed simultaneously in Flutter and React Native to benchmark and showcase cross-platform architectural patterns. OmniNote features a robust markdown editing engine, real-time local-first synchronization using conflict-free replicated data types (CRDTs), and end-to-end encryption. The project highlights advanced state management (BLoC/Provider for Flutter, Zustand Toolkit for React Native) and demonstrates how to achieve 60fps rich-text rendering and seamless SQLite-backed data persistence across both framework ecosystems.",
+      "period": "",
+      "bullets": [
+        "Stack: Flutter, React Native, Dart, TypeScript, SQLite, CRDT, Markdown Parser",
+        "Source: https://github.com/Akinleyejoshua/notepad_flutter",
+        "Live: https://media-gallery.free.nf/uploads/1784336775-465ae8f30fe672f0abaf15daed8909d0.apk"
+      ],
+      "tags": [
+        "flutter",
+        "react native",
+        "dart",
+        "typescript",
+        "sqlite",
+        "crdt",
+        "markdown parser",
+        "mobile"
+      ]
+    },
+    {
+      "id": "imported-skills",
+      "kind": "skill",
+      "title": "Technical skills",
+      "organization": "",
+      "period": "",
+      "summary": "Ranked by how many shipped projects each one appears in.",
+      "bullets": [
+        "Next.js — 13 projects",
+        "Node.js — 9 projects",
+        "React — 8 projects",
+        "Python — 6 projects",
+        "MongoDB — 5 projects",
+        "TypeScript — 4 projects",
+        "CSS — 3 projects",
+        "Power BI — 3 projects",
+        "TensorFlow — 3 projects",
+        "Excel — 2 projects",
+        "Express — 2 projects",
+        "FastAPI — 2 projects",
+        "Hardhat — 2 projects",
+        "LangChain — 2 projects",
+        "MetaMask — 2 projects",
+        "OpenAI — 2 projects",
+        "OpenCV — 2 projects",
+        "PHP — 2 projects",
+        "Remix — 2 projects",
+        "Socket.io — 2 projects",
+        "Solidity — 2 projects",
+        "WebRTC — 2 projects",
+        "ethers.js — 2 projects",
+        "AI — 1 project"
+      ],
+      "tags": [
+        "next.js",
+        "node.js",
+        "react",
+        "python",
+        "mongodb",
+        "typescript",
+        "css",
+        "power bi",
+        "tensorflow",
+        "excel",
+        "express",
+        "fastapi",
+        "hardhat",
+        "langchain",
+        "metamask",
+        "openai",
+        "opencv",
+        "php",
+        "remix",
+        "socket.io",
+        "solidity",
+        "webrtc",
+        "ethers.js",
+        "ai",
+        "cnn",
+        "crdt",
+        "dart",
+        "data bi",
+        "flutter",
+        "gpt-4",
+        "gemini",
+        "html",
+        "javascript",
+        "keras",
+        "markdown parser",
+        "mysql",
+        "pytorch",
+        "react native",
+        "redis",
+        "sql",
+        "sqlite",
+        "selenium",
+        "tensorflow.js",
+        "webgpu",
+        "woocommerce",
+        "yolo8"
+      ]
+    },
+    {
+      "id": "imported-links",
+      "kind": "note",
+      "title": "Profiles and links",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [
+        "github: http://github.com/Akinleyejoshua",
+        "turing: https://matching.turing.com/developer-resume-preview/94fcd098ef28063a611a36b6c211b83394302204b3221e",
+        "Twitter: https://x.com/yeshuaakinleye",
+        "Linkedin: https://www.linkedin.com/in/joshua-akinleye-061a013a6/",
+        "Facebook: https://www.facebook.com/akinleye.joshua2",
+        "Instagram: https://www.instagram.com/joshua_akinleye",
+        "Tiktok: https://www.tiktok.com/@joshua_akinleye",
+        "youtube: https://www.youtube.com/@akinleyejoshua1785",
+        "Whatsapp: https://wa.me/message/AMD7EGWCFIF5I1"
+      ],
+      "tags": [
+        "github",
+        "linkedin",
+        "portfolio",
+        "contact",
+        "turing"
+      ]
+    },
+    {
+      "id": "recruiter-0",
+      "kind": "question",
+      "title": "Tell me about yourself",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "intro",
+        "background",
+        "yourself",
+        "walk me through"
+      ]
+    },
+    {
+      "id": "recruiter-1",
+      "kind": "question",
+      "title": "Why are you looking to leave your current role?",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "leave",
+        "why",
+        "motivation",
+        "current role"
+      ]
+    },
+    {
+      "id": "recruiter-2",
+      "kind": "question",
+      "title": "Why this company?",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "why us",
+        "company",
+        "motivation",
+        "interest"
+      ]
+    },
+    {
+      "id": "recruiter-3",
+      "kind": "question",
+      "title": "What is the project you are proudest of?",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "proud",
+        "project",
+        "favourite",
+        "best work"
+      ]
+    },
+    {
+      "id": "recruiter-4",
+      "kind": "question",
+      "title": "Tell me about a difficult technical problem you solved",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "difficult",
+        "challenge",
+        "hardest",
+        "problem",
+        "debug"
+      ]
+    },
+    {
+      "id": "recruiter-5",
+      "kind": "question",
+      "title": "Tell me about a conflict with a teammate",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "conflict",
+        "disagreement",
+        "teammate",
+        "difficult person"
+      ]
+    },
+    {
+      "id": "recruiter-6",
+      "kind": "question",
+      "title": "What is your biggest weakness?",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "weakness",
+        "improve",
+        "development area",
+        "feedback"
+      ]
+    },
+    {
+      "id": "recruiter-7",
+      "kind": "question",
+      "title": "Describe a time you failed",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "failure",
+        "mistake",
+        "went wrong",
+        "learned"
+      ]
+    },
+    {
+      "id": "recruiter-8",
+      "kind": "question",
+      "title": "Tell me about a time you led without authority",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "leadership",
+        "led",
+        "influence",
+        "ownership"
+      ]
+    },
+    {
+      "id": "recruiter-9",
+      "kind": "question",
+      "title": "How do you handle competing priorities?",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "priorities",
+        "deadline",
+        "time management",
+        "pressure"
+      ]
+    },
+    {
+      "id": "recruiter-10",
+      "kind": "question",
+      "title": "What are your salary expectations?",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "salary",
+        "compensation",
+        "expectations",
+        "pay",
+        "range"
+      ]
+    },
+    {
+      "id": "recruiter-11",
+      "kind": "question",
+      "title": "Where do you see yourself in a few years?",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "future",
+        "goals",
+        "career",
+        "growth",
+        "five years"
+      ]
+    },
+    {
+      "id": "recruiter-12",
+      "kind": "question",
+      "title": "Do you have any questions for us?",
+      "organization": "",
+      "period": "",
+      "summary": "",
+      "bullets": [],
+      "tags": [
+        "questions for us",
+        "anything to ask"
+      ]
+    }
+  ]
+}
