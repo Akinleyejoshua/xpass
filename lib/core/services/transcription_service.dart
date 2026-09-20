@@ -8,6 +8,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../constants/app_prompts.dart';
 import '../models/assist_models.dart';
 import '../models/audio_models.dart';
+import '../utils/rate_limiter.dart';
 import '../utils/wav.dart';
 import 'gemini_service.dart';
 import 'settings_service.dart';
@@ -60,13 +61,24 @@ class GeminiBatchTranscriber extends Transcriber {
     required this.gemini,
     required this.apiKey,
     required this.model,
-  });
+    int requestsPerMinute = 12,
+  }) : _limiter = RateLimiter(permitsPerMinute: requestsPerMinute);
 
   final GeminiService gemini;
   final String apiKey;
   final String model;
 
+  /// Paces requests so a fast exchange cannot trip the provider's per-minute
+  /// limit. One utterance is one request, and a brisk conversation produces
+  /// far more utterances per minute than a free-tier key allows.
+  final RateLimiter _limiter;
+
   static const int _maxConcurrent = 2;
+
+  /// Beyond this, the backlog is older than it is useful. An utterance that
+  /// lands after the interviewer has moved on is worse than no transcript, so
+  /// the oldest are dropped rather than queued forever.
+  static const int _maxQueued = 8;
 
   final StreamController<TranscriptEvent> _events =
       StreamController<TranscriptEvent>.broadcast();
@@ -75,6 +87,7 @@ class GeminiBatchTranscriber extends Transcriber {
 
   int _inFlight = 0;
   bool _disposed = false;
+  int _consecutive429s = 0;
 
   @override
   Stream<TranscriptEvent> get events => _events.stream;
@@ -89,6 +102,9 @@ class GeminiBatchTranscriber extends Transcriber {
   void pushSegment(SpeechSegment segment) {
     if (_disposed) return;
     _queue.add(segment);
+    while (_queue.length > _maxQueued) {
+      _queue.removeAt(0);
+    }
     _drain();
   }
 
@@ -102,6 +118,9 @@ class GeminiBatchTranscriber extends Transcriber {
 
   Future<void> _transcribe(SpeechSegment segment) async {
     try {
+      await _limiter.acquire();
+      if (_disposed) return;
+
       final Uint8List wav = pcm16ToWav(
         segment.pcm,
         sampleRate: segment.sampleRate,
@@ -111,6 +130,10 @@ class GeminiBatchTranscriber extends Transcriber {
         wav: wav,
         model: model,
       );
+
+      _consecutive429s = 0;
+      _limiter.recover();
+
       if (_disposed || _events.isClosed) return;
       if (text.trim().isEmpty) return;
       _events.add(
@@ -121,7 +144,24 @@ class GeminiBatchTranscriber extends Transcriber {
         ),
       );
     } on AiServiceException catch (error) {
-      if (!_disposed && !_errors.isClosed) _errors.add(error.message);
+      if (error.statusCode == 429) {
+        _consecutive429s++;
+        // Exponential backoff, capped at a minute. Retrying straight into a
+        // throttle is what turns a brief limit into a long one.
+        final int seconds = (5 * (1 << (_consecutive429s - 1))).clamp(5, 60);
+        _limiter.penalise(Duration(seconds: seconds));
+        // Drop the backlog: by the time the penalty lifts it is stale anyway.
+        _queue.clear();
+        if (!_disposed && !_errors.isClosed) {
+          _errors.add(
+            'Transcription rate limited — pausing ${seconds}s. '
+            'Lower "requests per minute" in Settings, or turn off '
+            'microphone transcription.',
+          );
+        }
+      } else if (!_disposed && !_errors.isClosed) {
+        _errors.add(error.message);
+      }
     } catch (error) {
       if (!_disposed && !_errors.isClosed) _errors.add(error.toString());
     } finally {
@@ -537,6 +577,7 @@ Transcriber buildTranscriber({
         // A dedicated speech-to-text model, never the reasoning model — the
         // deep tier would add seconds per utterance for no accuracy gain.
         model: settings.geminiTranscribeModel,
+        requestsPerMinute: settings.transcriptionRpm,
       );
   }
 }

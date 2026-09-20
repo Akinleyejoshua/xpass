@@ -84,6 +84,30 @@ class CaptureTab extends ConsumerWidget {
                 ),
               ),
             ),
+            SettingsRow(
+              label: 'Transcribe my microphone too',
+              hint: 'Doubles the request rate — leave off if you hit quota',
+              controlWidth: 60,
+              child: XpSwitch(
+                value: config.transcribeMic,
+                onChanged: (bool v) =>
+                    update((XpSettings s) => s.copyWith(transcribeMic: v)),
+              ),
+            ),
+            SettingsRow(
+              label: 'Requests per minute',
+              hint: 'Keep below your plan\'s limit so screen solves still fit',
+              child: XpSlider(
+                value: config.transcriptionRpm.toDouble(),
+                min: 2,
+                max: 60,
+                divisions: 29,
+                format: (double v) => '${v.round()}/min',
+                onChanged: (double v) => update(
+                  (XpSettings s) => s.copyWith(transcriptionRpm: v.round()),
+                ),
+              ),
+            ),
             if (config.transcriptionBackend == TranscriptionBackend.geminiBatch)
               SettingsRow(
                 label: 'Speech-to-text model',

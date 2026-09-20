@@ -5,11 +5,13 @@ import '../../core/constants/colors.dart';
 import '../../core/constants/typography.dart';
 import '../../core/providers.dart';
 import 'widgets/capture_tab.dart';
+import 'widgets/guide_tab.dart';
 import 'widgets/models_tab.dart';
 import 'widgets/profile_tab.dart';
 import 'widgets/shortcuts_tab.dart';
 
 enum _Tab {
+  guide('Guide', Icons.menu_book_outlined),
   models('Models', Icons.hub_outlined),
   capture('Capture', Icons.graphic_eq_rounded),
   profile('You', Icons.person_outline_rounded),
@@ -31,7 +33,7 @@ class SettingsView extends ConsumerStatefulWidget {
 }
 
 class _SettingsViewState extends ConsumerState<SettingsView> {
-  _Tab _tab = _Tab.models;
+  _Tab _tab = _Tab.guide;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +70,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
         ),
         Expanded(
           child: switch (_tab) {
+            _Tab.guide => const GuideTab(),
             _Tab.models => const ModelsTab(),
             _Tab.capture => const CaptureTab(),
             _Tab.profile => const ProfileTab(),

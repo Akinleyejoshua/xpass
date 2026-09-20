@@ -310,7 +310,12 @@ class HudController extends ChangeNotifier {
           _setStatus(HudStatus.listening);
         }
       case VadSpeechEnd(segment: final SpeechSegment segment):
-        _transcriber?.pushSegment(segment);
+        // Every segment is one API request. The user's own speech is optional
+        // context; the interviewer's is what actually drives an answer.
+        if (segment.source == AudioSource.system ||
+            settings.value.transcribeMic) {
+          _transcriber?.pushSegment(segment);
+        }
       case null:
         break;
     }

@@ -64,6 +64,8 @@ class XpSettings {
     this.systemAudioEnabled = true,
     this.autoAnswer = true,
     this.transcriptionBackend = TranscriptionBackend.geminiBatch,
+    this.transcriptionRpm = 12,
+    this.transcribeMic = false,
     this.rivaBaseUrl = 'http://localhost:9000/v1',
     this.fastPromptOverride = '',
     this.deepPromptOverride = '',
@@ -151,6 +153,18 @@ class XpSettings {
   /// Fire a tier-1 answer automatically when the interviewer stops talking.
   final bool autoAnswer;
   final TranscriptionBackend transcriptionBackend;
+
+  /// Cap on transcription requests per minute. One utterance is one request,
+  /// so a brisk conversation can otherwise exhaust a free-tier quota in
+  /// seconds. Keep this below the account's real limit to leave headroom for
+  /// screen solves.
+  final int transcriptionRpm;
+
+  /// Transcribe your own microphone as well as the interviewer.
+  ///
+  /// Off by default: it roughly halves the request rate, and you already know
+  /// what you said — only the other side's questions drive answers.
+  final bool transcribeMic;
   final String rivaBaseUrl;
   final String fastPromptOverride;
   final String deepPromptOverride;
@@ -188,6 +202,8 @@ class XpSettings {
     bool? systemAudioEnabled,
     bool? autoAnswer,
     TranscriptionBackend? transcriptionBackend,
+    int? transcriptionRpm,
+    bool? transcribeMic,
     String? rivaBaseUrl,
     String? fastPromptOverride,
     String? deepPromptOverride,
@@ -213,6 +229,8 @@ class XpSettings {
       systemAudioEnabled: systemAudioEnabled ?? this.systemAudioEnabled,
       autoAnswer: autoAnswer ?? this.autoAnswer,
       transcriptionBackend: transcriptionBackend ?? this.transcriptionBackend,
+      transcriptionRpm: transcriptionRpm ?? this.transcriptionRpm,
+      transcribeMic: transcribeMic ?? this.transcribeMic,
       rivaBaseUrl: rivaBaseUrl ?? this.rivaBaseUrl,
       fastPromptOverride: fastPromptOverride ?? this.fastPromptOverride,
       deepPromptOverride: deepPromptOverride ?? this.deepPromptOverride,
@@ -294,6 +312,8 @@ class SettingsController extends ChangeNotifier {
       transcriptionBackend: TranscriptionBackend.fromName(
         prefs.getString('transcriptionBackend'),
       ),
+      transcriptionRpm: prefs.getInt('transcriptionRpm') ?? 12,
+      transcribeMic: prefs.getBool('transcribeMic') ?? false,
       rivaBaseUrl: prefs.getString('rivaBaseUrl') ?? 'http://localhost:9000/v1',
       fastPromptOverride: prefs.getString('fastPromptOverride') ?? '',
       deepPromptOverride: prefs.getString('deepPromptOverride') ?? '',
@@ -336,6 +356,8 @@ class SettingsController extends ChangeNotifier {
       _prefs.setBool('systemAudioEnabled', next.systemAudioEnabled),
       _prefs.setBool('autoAnswer', next.autoAnswer),
       _prefs.setString('transcriptionBackend', next.transcriptionBackend.name),
+      _prefs.setInt('transcriptionRpm', next.transcriptionRpm),
+      _prefs.setBool('transcribeMic', next.transcribeMic),
       _prefs.setString('rivaBaseUrl', next.rivaBaseUrl),
       _prefs.setString('fastPromptOverride', next.fastPromptOverride),
       _prefs.setString('deepPromptOverride', next.deepPromptOverride),
