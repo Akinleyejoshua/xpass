@@ -28,6 +28,7 @@ final class MainFlutterWindow: NSWindow {
   private var speechBridge: SpeechRecognitionBridge?
 
   override func awakeFromNib() {
+    XpLog.reset()
     let flutterViewController = FlutterViewController()
     let windowFrame = self.frame
     self.contentViewController = flutterViewController

@@ -443,9 +443,12 @@ class _PipelineReadout extends ConsumerWidget {
           (
             label: 'Transcribed',
             value: hud.transcriptLines,
-            stalled:
-                'Speech detected but nothing came back. Usually a missing or '
-                'rejected Gemini key, or a rate limit.',
+            stalled: hud.speechReady
+                ? 'Speech detected but nothing came back. Check the '
+                      'transcription backend under Settings › Capture.'
+                : 'Speech Recognition is not granted, so nothing can be '
+                      'transcribed. Accept the macOS prompt, or use the Grant '
+                      'button under Settings › Capture.',
           ),
           (
             label: 'Answered',

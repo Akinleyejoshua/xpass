@@ -27,6 +27,7 @@
 		33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F22044A3C60003C045 /* Assets.xcassets */; };
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
+		XP00000000000000000012 /* XpLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = XP00000000000000000013 /* XpLog.swift */; };
 		XP00000000000000000010 /* SpeechRecognitionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = XP00000000000000000011 /* SpeechRecognitionBridge.swift */; };
 		XP0000000000000000000E /* GlobalHotkeyBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = XP0000000000000000000F /* GlobalHotkeyBridge.swift */; };
 		XP0000000000000000000C /* NativeAudioScreenBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = XP0000000000000000000D /* NativeAudioScreenBridge.swift */; };
@@ -75,6 +76,7 @@
 		33CC10F52044A3C60003C045 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		33CC10F72044A3C60003C045 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Runner/Info.plist; sourceTree = "<group>"; };
 		33CC11122044BFA00003C045 /* MainFlutterWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlutterWindow.swift; sourceTree = "<group>"; };
+		XP00000000000000000013 /* XpLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XpLog.swift; sourceTree = "<group>"; };
 		XP00000000000000000011 /* SpeechRecognitionBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionBridge.swift; sourceTree = "<group>"; };
 		XP0000000000000000000F /* GlobalHotkeyBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotkeyBridge.swift; sourceTree = "<group>"; };
 		XP0000000000000000000D /* NativeAudioScreenBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAudioScreenBridge.swift; sourceTree = "<group>"; };
@@ -176,6 +178,7 @@
 			children = (
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
+				XP00000000000000000013 /* XpLog.swift */,
 				XP00000000000000000011 /* SpeechRecognitionBridge.swift */,
 				XP0000000000000000000F /* GlobalHotkeyBridge.swift */,
 				XP0000000000000000000D /* NativeAudioScreenBridge.swift */,
@@ -367,6 +370,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
+				XP00000000000000000012 /* XpLog.swift in Sources */,
 				XP00000000000000000010 /* SpeechRecognitionBridge.swift in Sources */,
 				XP0000000000000000000E /* GlobalHotkeyBridge.swift in Sources */,
 				XP0000000000000000000C /* NativeAudioScreenBridge.swift in Sources */,

@@ -177,19 +177,34 @@ class HudController extends ChangeNotifier {
     await hotkeys.applyBindings(settings.value.hotkeys);
     _reportHotkeyFailures();
 
-    // Deliberately does NOT request Speech Recognition here. Asking trips TCC,
-    // and if this process was exec'd from a shell the request is evaluated
-    // against the *terminal's* Info.plist — which has no speech usage
-    // description, so macOS kills xpass outright. Reading the status is a
-    // local lookup and is always safe; the request happens behind an explicit
-    // button in Settings.
     _launch = await screen.launchDiagnostics();
-    if (!_launch.launchedByLaunchd) {
+
+    // Requesting Speech Recognition trips TCC, and TCC evaluates the
+    // *responsible* process. Under launchd that is xpass itself, whose
+    // Info.plist carries the usage description, so the prompt is safe. Exec'd
+    // from a shell the responsible process is the terminal, whose plist has no
+    // such key — and macOS terminates xpass mid-request. So: ask when it is
+    // safe to ask, and never otherwise.
+    await screen.log(
+      'init: backend=${settings.value.transcriptionBackend.name} '
+      'launchd=${_launch.launchedByLaunchd} speechReady=$_speechReady '
+      'screen=$_screenPermission',
+    );
+
+    if (settings.value.transcriptionBackend ==
+            TranscriptionBackend.appleOnDevice &&
+        _launch.launchedByLaunchd &&
+        !_speechReady) {
+      await screen.log('init: requesting speech authorization');
+      _speechReady = await speech.requestAuthorization();
+      await screen.log('init: speech authorization granted=$_speechReady');
+    }
+    if (!_launch.launchedByLaunchd && !_speechReady) {
       _pipelineError =
-          'xpass was launched from a terminal, so macOS is applying that '
-          'terminal\'s privacy permissions instead of xpass\'s. Screen '
-          'Recording will read as denied and requesting Speech Recognition '
-          'will crash the app. Quit and run: open ${_launch.bundlePath}';
+          'xpass was launched from a terminal, so macOS applies that '
+          'terminal\'s privacy permissions instead of xpass\'s — and asking '
+          'for Speech Recognition would terminate the app. Quit and run: '
+          'open ${_launch.bundlePath}';
       _setBanner(_pipelineError!, isError: true);
     }
 
@@ -315,9 +330,12 @@ class HudController extends ChangeNotifier {
     _listening = true;
     _setStatus(HudStatus.listening);
 
+    await screen.log('listen: audio started, starting transcriber');
     try {
       await _startTranscriber();
+      await screen.log('listen: transcriber running');
     } on AiServiceException catch (error) {
+      await screen.log('listen: transcriber failed — ${error.message}');
       // Degraded, not dead: audio still flows, the meters still move, and the
       // ask box and screen solving are untouched.
       _pipelineError =

@@ -176,6 +176,22 @@ class ScreenCaptureService {
     }
   }
 
+  /// Append a line to `~/Library/Logs/xpass-debug.log`.
+  ///
+  /// stdout is unreachable for a bundle launched by launchd, so this is the
+  /// only way to see what the app decided at startup.
+  Future<void> log(String message) async {
+    try {
+      await XpChannels.media.invokeMethod<bool>('log', <String, Object?>{
+        'message': message,
+      });
+    } on PlatformException {
+      // Diagnostics must never break the thing they are diagnosing.
+    } on MissingPluginException {
+      // Running without the native side (tests).
+    }
+  }
+
   /// How the process was launched — see [LaunchDiagnostics].
   Future<LaunchDiagnostics> launchDiagnostics() async {
     try {

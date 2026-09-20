@@ -645,6 +645,10 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
         DispatchQueue.main.async { result(granted) }
       }
 
+    case "log":
+      XpLog.write((args["message"] as? String) ?? "")
+      result(true)
+
     case "launchDiagnostics":
       // macOS attributes privacy permissions to the *responsible* process. An
       // app exec'd from a shell inherits the terminal as responsible, so TCC
@@ -776,18 +780,13 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
         false,
         onScreenWindowsOnly: true
       )
-      NSLog(
-        "xpass: screen access GRANTED (%d displays, legacy preflight=%@)",
-        content.displays.count,
-        CGPreflightScreenCaptureAccess() ? "true" : "false"
+      XpLog.write(
+        "screen: GRANTED (\(content.displays.count) displays, legacy=\(CGPreflightScreenCaptureAccess()))"
       )
       return (true, nil, content.displays.count)
     } catch {
-      NSLog(
-        "xpass: screen access DENIED — %@ (legacy preflight=%@, responsible parent pid=%d)",
-        error.localizedDescription,
-        CGPreflightScreenCaptureAccess() ? "true" : "false",
-        getppid()
+      XpLog.write(
+        "screen: DENIED \(error.localizedDescription) (legacy=\(CGPreflightScreenCaptureAccess()), ppid=\(getppid()))"
       )
       return (false, error.localizedDescription, 0)
     }
