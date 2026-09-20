@@ -1,0 +1,77 @@
+ป		ปxป#!/bin/bash
+# Create a local code-signing certificate so macOS privacy grants survive a
+# rebuild. Run once.
+#
+# Why this is needed:
+#   A default Flutter build is ad-hoc signed, and an ad-hoc signature's
+#   designated requirement is the binary's own hash:
+#
+#       # designated => cdhash H"7540b3e6..."
+#
+#   TCC stores Screen Recording against that hash. Rebuild, and the hash
+#   changes, so the grant no longer matches the binary you are running — while
+#   System Settings still shows "xpass" switched on, because it lists the app
+#   by path. The result is a permission that appears granted and behaves as
+#   denied, every single build.
+#
+#   Signing with a certificate changes the designated requirement to
+#
+#       identifier "com.xpass.app" and certificate leaf = H"<cert hash>"
+#
+#   which does not depend on the binary contents, so one grant covers every
+#   future build.
+#
+# A self-signed certificate is sufficient: TCC cares that the identity is
+# stable, not that Apple issued it. An Apple Development certificate works too
+# and is preferable if you have one — set it in Xcode instead and skip this.
+set -euo pipefail
+
+NAME="xpass Local Signing"
+KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+if security find-certificate -c "$NAME" >/dev/null 2>&1; then
+  echo "Certificate '$NAME' already exists."
+  echo "Run ./run.sh — it signs with it automatically."
+  exit 0
+fi
+
+echo "==> Generating a self-signed code-signing certificate"
+openssl req -newkey rsa:2048 -nodes \
+  -keyout "$WORK/key.pem" \
+  -x509 -days 3650 \
+  -out "$WORK/cert.pem" \
+  -subj "/CN=$NAME/O=xpass/C=US" \
+  -addext "basicConstraints=critical,CA:false" \
+  -addext "keyUsage=critical,digitalSignature" \
+  -addext "extendedKeyUsage=critical,codeSigning" \
+  2>/dev/null
+
+openssl pkcs12 -export \
+  -out "$WORK/cert.p12" \
+  -inkey "$WORK/key.pem" \
+  -in "$WORK/cert.pem" \
+  -passout pass: \
+  2>/dev/null
+
+echo "==> Importing into your login keychain"
+echo "    (macOS may ask for your password, and again to allow codesign access)"
+security import "$WORK/cert.p12" -k "$KEYCHAIN" -P "" -T /usr/bin/codesign
+
+echo "==> Trusting it for code signing"
+# User-domain trust: no sudo, and enough for codesign to build a chain.
+security add-trusted-cert -r trustRoot -p codeSign -k "$KEYCHAIN" "$WORK/cert.pem" \
+  || echo "    (trust step needs confirmation — approve the prompt if one appeared)"
+
+# Let codesign use the key without prompting on every build.
+security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN" >/dev/null 2>&1 \
+  || echo "    (could not pre-authorise the key; you may be prompted once per build)"
+
+echo
+echo "Done. Now:"
+echo "  1. ./run.sh"
+echo "  2. Grant Screen Recording and Speech Recognition to xpass"
+echo "  3. ./run.sh again  (macOS applies Screen Recording on a fresh launch)"
+echo
+echo "From then on the grants survive rebuilds."

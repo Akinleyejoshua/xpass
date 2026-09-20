@@ -47,50 +47,24 @@ If macOS refuses to attach a debugger, enable Developer Mode once:
 sudo DevToolsSecurity -enable
 ```
 
-### Signing, so Screen Recording stays granted
+### Signing
 
-```bash
-./sign-setup.sh     # once
-```
+A default Flutter build is ad-hoc signed. That is **not** what breaks Screen
+Recording — measured directly, macOS honoured the grant for a completely
+different binary placed inside the same bundle, so the permission is keyed to
+the bundle here, not the binary hash.
 
-A default Flutter build is **ad-hoc signed**, and an ad-hoc signature's
-designated requirement is the binary's own hash:
+`./sign-setup.sh` creates a self-signed code-signing certificate and `run.sh`
+signs with it when present. Worth doing if you move the bundle around or
+distribute it, and harmless otherwise — but it is not the fix for a permission
+that reads as denied. That is almost always the launch method above.
 
-```
-$ codesign -d -r- build/macos/Build/Products/Debug/xpass.app
-# designated => cdhash H"7540b3e689f43437d1e6f3e4a9e057a4f6586785"
-```
-
-TCC stores the Screen Recording grant against that hash. Rebuild, and the hash
-changes, so the grant no longer matches the binary you are running — while
-System Settings still shows xpass switched on, because it lists apps by path.
-A permission that reads as granted and behaves as denied, every single build.
-
-`sign-setup.sh` creates a self-signed code-signing certificate, and `run.sh`
-signs each build with it. The designated requirement becomes
-
-```
-identifier "com.xpass.app" and certificate leaf = H"<cert hash>"
-```
-
-which does not depend on the binary, so one grant covers every future build.
-A self-signed certificate is enough — TCC cares that the identity is stable,
-not that Apple issued it. If you do have an Apple Development certificate, set
-it in Xcode (Runner target › Signing & Capabilities) and skip the script.
-
-To clear a stale grant for the current build:
+To clear a stale grant and start over:
 
 ```bash
 tccutil reset ScreenCapture com.xpass.app
+tccutil reset SpeechRecognition com.xpass.app
 ```
-
-The panel warns you when the running build is ad-hoc signed and Screen
-Recording is missing.
-
-`flutter doctor` may warn about CocoaPods and iOS simulator runtimes. Neither
-affects this project; it is macOS-desktop only and CocoaPods-free.
-
----
 
 ## 2. First run
 

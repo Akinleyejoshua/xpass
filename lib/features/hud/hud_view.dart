@@ -274,10 +274,6 @@ class _EmptyState extends ConsumerWidget {
 
           const SizedBox(height: 14),
           if (!hud.launch.launchedByLaunchd) const _LaunchWarning(),
-          if (hud.launch.launchedByLaunchd &&
-              hud.launch.isAdhocSigned &&
-              !hud.hasScreenPermission)
-            const _SigningWarning(),
           const _PipelineReadout(),
           const SizedBox(height: 14),
           Wrap(
@@ -628,88 +624,6 @@ class _LaunchWarning extends ConsumerWidget {
           SelectableText(
             'open ${hud.launch.bundlePath}',
             style: XpType.code.copyWith(fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Shown when Screen Recording is missing on an ad-hoc signed build — the case
-/// where granting it appears to work and then silently stops on the next
-/// rebuild.
-class _SigningWarning extends StatelessWidget {
-  const _SigningWarning();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: XpColors.statusThinking.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: XpColors.statusThinking.withValues(alpha: 0.4),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Icon(
-                Icons.fingerprint_rounded,
-                size: 14,
-                color: XpColors.statusThinking,
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  'Granting Screen Recording will not stick on this build',
-                  style: XpType.body.copyWith(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'This build is ad-hoc signed, so macOS pins the permission to the '
-            'exact binary. Every rebuild changes it, and the grant stops '
-            'matching — while System Settings still shows xpass switched on, '
-            'because it lists apps by path.',
-            style: XpType.bodyMuted.copyWith(fontSize: 11.5, height: 1.45),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Fix it permanently — run once, then rebuild:',
-            style: XpType.bodyMuted.copyWith(fontSize: 11.5),
-          ),
-          const SizedBox(height: 4),
-          const SelectableText(
-            './sign-setup.sh',
-            style: TextStyle(
-              fontFamily: XpType.monoFamily,
-              fontSize: 11,
-              color: XpColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'To re-grant this build right now, clear the stale entry first:',
-            style: XpType.bodyMuted.copyWith(fontSize: 11.5),
-          ),
-          const SizedBox(height: 4),
-          const SelectableText(
-            'tccutil reset ScreenCapture com.xpass.app',
-            style: TextStyle(
-              fontFamily: XpType.monoFamily,
-              fontSize: 11,
-              color: XpColors.textPrimary,
-            ),
           ),
         ],
       ),

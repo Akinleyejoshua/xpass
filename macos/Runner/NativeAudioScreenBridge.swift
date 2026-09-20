@@ -593,7 +593,44 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
     // MARK: Permissions
 
     case "hasScreenPermission":
-      result(CGPreflightScreenCaptureAccess())
+      // Ask ScreenCaptureKit, not CoreGraphics.
+      //
+      // CGPreflightScreenCaptureAccess() reports on the legacy CGWindowList /
+      // CGDisplayStream path. Everything here captures through
+      // ScreenCaptureKit, and the two do not agree: the CG preflight caches
+      // per-process and commonly answers false for an app that has only ever
+      // used SCK — including after the user has granted the permission. The
+      // only trustworthy test is whether SCK will actually hand us content.
+      if #available(macOS 13.0, *) {
+        Task {
+          let probe = await MediaBridge.probeScreenAccess()
+          await MainActor.run { result(probe.granted) }
+        }
+      } else {
+        result(CGPreflightScreenCaptureAccess())
+      }
+
+    case "screenPermissionDetail":
+      if #available(macOS 13.0, *) {
+        Task {
+          let probe = await MediaBridge.probeScreenAccess()
+          await MainActor.run {
+            result([
+              "granted": probe.granted,
+              "error": probe.error ?? "",
+              "legacyPreflight": CGPreflightScreenCaptureAccess(),
+              "displays": probe.displays,
+            ])
+          }
+        }
+      } else {
+        result([
+          "granted": CGPreflightScreenCaptureAccess(),
+          "error": "",
+          "legacyPreflight": CGPreflightScreenCaptureAccess(),
+          "displays": 0,
+        ])
+      }
 
     case "requestScreenPermission":
       // Returns false the first time and shows the system prompt; the app must
@@ -724,6 +761,35 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
 
     default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+
+  /// The authoritative screen-recording check: can ScreenCaptureKit actually
+  /// enumerate content?
+  ///
+  /// This does not prompt — an ungranted app gets an error instead. Requesting
+  /// is still CGRequestScreenCaptureAccess()'s job.
+  @available(macOS 13.0, *)
+  static func probeScreenAccess() async -> (granted: Bool, error: String?, displays: Int) {
+    do {
+      let content = try await SCShareableContent.excludingDesktopWindows(
+        false,
+        onScreenWindowsOnly: true
+      )
+      NSLog(
+        "xpass: screen access GRANTED (%d displays, legacy preflight=%@)",
+        content.displays.count,
+        CGPreflightScreenCaptureAccess() ? "true" : "false"
+      )
+      return (true, nil, content.displays.count)
+    } catch {
+      NSLog(
+        "xpass: screen access DENIED — %@ (legacy preflight=%@, responsible parent pid=%d)",
+        error.localizedDescription,
+        CGPreflightScreenCaptureAccess() ? "true" : "false",
+        getppid()
+      )
+      return (false, error.localizedDescription, 0)
     }
   }
 

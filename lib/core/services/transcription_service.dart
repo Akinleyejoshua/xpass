@@ -642,16 +642,21 @@ class NativeSpeechTranscriber extends Transcriber {
       );
     }
 
+    // Deliberately reads the status and never requests it.
+    //
+    // Requesting trips TCC, and TCC evaluates the *responsible* process — the
+    // parent that launched this one. Launched from a terminal, that is the
+    // terminal, whose Info.plist has no speech usage description, so macOS
+    // terminates xpass mid-request. Reading the status is a local lookup and
+    // is always safe. The request lives behind the Grant button in Settings,
+    // which refuses to fire unless launchd is the responsible process.
     final SpeechAuthorization status = await speech.authorizationStatus();
     if (!status.isGranted) {
-      final bool granted = await speech.requestAuthorization();
-      if (!granted) {
-        throw const AiServiceException(
-          'Speech Recognition permission denied. Enable xpass under '
-          'Privacy & Security › Speech Recognition.',
-          provider: 'macOS Speech',
-        );
-      }
+      throw const AiServiceException(
+        'Speech Recognition permission not granted. Use the Grant button '
+        'under Settings › Capture.',
+        provider: 'macOS Speech',
+      );
     }
 
     _eventSub = speech.events.listen((NativeSpeechEvent event) {
