@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -118,6 +120,7 @@ class HudHeader extends ConsumerWidget {
               activeColor: XpColors.statusMuted,
               onTap: hud.hide,
             ),
+            const _QuitButton(),
           ],
         ),
       ),
@@ -301,6 +304,81 @@ class _NotesButton extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Quit, behind a confirmation.
+///
+/// xpass has no Dock icon and no menu bar, so this is the only way out of the
+/// app — but it sits one pixel from Panic hide, and quitting mid-interview by
+/// accident would be worse than not being able to quit at all. Hence two
+/// clicks, with the second only accepted for a couple of seconds.
+class _QuitButton extends ConsumerStatefulWidget {
+  const _QuitButton();
+
+  @override
+  ConsumerState<_QuitButton> createState() => _QuitButtonState();
+}
+
+class _QuitButtonState extends ConsumerState<_QuitButton> {
+  bool _armed = false;
+  Timer? _disarm;
+
+  @override
+  void dispose() {
+    _disarm?.cancel();
+    super.dispose();
+  }
+
+  void _onTap() {
+    if (_armed) {
+      _disarm?.cancel();
+      ref.read(hudControllerProvider).quit();
+      return;
+    }
+    setState(() => _armed = true);
+    _disarm?.cancel();
+    _disarm = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _armed = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_armed) {
+      return XpIconButton(
+        icon: Icons.power_settings_new_rounded,
+        tooltip: 'Quit xpass — ⌘Q',
+        activeColor: XpColors.statusMuted,
+        onTap: _onTap,
+      );
+    }
+
+    return Tooltip(
+      message: 'Click again to quit',
+      child: GestureDetector(
+        onTap: _onTap,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            height: 26,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: XpColors.statusMuted,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              'QUIT?',
+              style: XpType.label.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

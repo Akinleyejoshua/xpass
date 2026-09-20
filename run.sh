@@ -27,6 +27,21 @@ flutter build macos --"$MODE"
 
 APP="build/macos/Build/Products/$( [ "$MODE" = release ] && echo Release || echo Debug )/xpass.app"
 
+# Re-sign with the local certificate if one exists. Without it the build is
+# ad-hoc signed, whose designated requirement is the binary hash — so every
+# rebuild invalidates the Screen Recording grant. See ./sign-setup.sh.
+IDENTITY="xpass Local Signing"
+if security find-certificate -c "$IDENTITY" >/dev/null 2>&1; then
+  echo "==> Signing with '$IDENTITY'"
+  codesign --force --deep --options runtime \
+    --entitlements macos/Runner/DebugProfile.entitlements \
+    --sign "$IDENTITY" "$APP" 2>&1 | grep -v "replacing existing signature" || true
+else
+  echo "==> No local signing certificate — this build is ad-hoc signed."
+  echo "    Screen Recording will need re-granting after every rebuild."
+  echo "    Run ./sign-setup.sh once to fix that permanently."
+fi
+
 echo "==> Stopping any running instance"
 pkill -x xpass 2>/dev/null || true
 sleep 0.5

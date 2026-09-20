@@ -157,4 +157,10 @@ class WindowService {
 
   /// Native window drag — smoother than repositioning per pointer event.
   Future<void> startDrag() => _invoke<bool>('startDrag');
+
+  /// Terminate the app.
+  ///
+  /// xpass runs as an agent (no Dock icon, no menu bar), so nothing else can
+  /// quit it from the UI.
+  Future<void> quit() => _invoke<bool>('quit');
 }

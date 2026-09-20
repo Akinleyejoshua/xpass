@@ -1059,6 +1059,13 @@ class HudController extends ChangeNotifier {
 
   Future<void> snap(HudAnchor anchor) => window.snapTo(anchor);
 
+  /// Quit xpass. Stops capture first so the recogniser and the system-audio
+  /// stream are released cleanly rather than torn down by termination.
+  Future<void> quit() async {
+    await stopListening();
+    await window.quit();
+  }
+
   void toggleSettings() =>
       showPane(_pane == HudPane.settings ? HudPane.answer : HudPane.settings);
 

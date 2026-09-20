@@ -47,16 +47,45 @@ If macOS refuses to attach a debugger, enable Developer Mode once:
 sudo DevToolsSecurity -enable
 ```
 
-### Signing, so permissions stick
+### Signing, so Screen Recording stays granted
 
-A default Flutter build is **ad-hoc signed**, and TCC keys grants to the code
-signature — which changes on every rebuild. Every build is therefore a new app
-to macOS, and Screen Recording has to be granted again each time.
+```bash
+./sign-setup.sh     # once
+```
 
-To stop that, open `macos/Runner.xcodeproj` in Xcode, select the Runner target
-› Signing & Capabilities, and pick your Apple ID team. An Apple Development
-certificate gives the bundle a stable identity and the grants persist. The
-panel tells you when the running build is ad-hoc signed.
+A default Flutter build is **ad-hoc signed**, and an ad-hoc signature's
+designated requirement is the binary's own hash:
+
+```
+$ codesign -d -r- build/macos/Build/Products/Debug/xpass.app
+# designated => cdhash H"7540b3e689f43437d1e6f3e4a9e057a4f6586785"
+```
+
+TCC stores the Screen Recording grant against that hash. Rebuild, and the hash
+changes, so the grant no longer matches the binary you are running — while
+System Settings still shows xpass switched on, because it lists apps by path.
+A permission that reads as granted and behaves as denied, every single build.
+
+`sign-setup.sh` creates a self-signed code-signing certificate, and `run.sh`
+signs each build with it. The designated requirement becomes
+
+```
+identifier "com.xpass.app" and certificate leaf = H"<cert hash>"
+```
+
+which does not depend on the binary, so one grant covers every future build.
+A self-signed certificate is enough — TCC cares that the identity is stable,
+not that Apple issued it. If you do have an Apple Development certificate, set
+it in Xcode (Runner target › Signing & Capabilities) and skip the script.
+
+To clear a stale grant for the current build:
+
+```bash
+tccutil reset ScreenCapture com.xpass.app
+```
+
+The panel warns you when the running build is ad-hoc signed and Screen
+Recording is missing.
 
 `flutter doctor` may warn about CocoaPods and iOS simulator runtimes. Neither
 affects this project; it is macOS-desktop only and CocoaPods-free.
@@ -166,6 +195,21 @@ diarization, so a panel of three interviewers is one undifferentiated "Them".
 registers on both meters. Mic transcription is off by default, which keeps that
 harmless; turning it on while using speakers would transcribe their words as
 yours.
+
+### Quitting
+
+xpass has no Dock icon and no menu bar — that is what keeps it out of the app
+switcher — so there is no Quit menu item:
+
+| | |
+|---|---|
+| `⌘Q` | quits, when the HUD has keyboard focus |
+| power icon | right of the header; click once to arm, again to quit |
+| `⌘⌥H` | hides without quitting, which is usually what you want |
+| `pkill -x xpass` | from a terminal, if the HUD is hidden and unfocused |
+
+The two-step on the button is deliberate: it sits beside Panic hide, and
+quitting by accident mid-interview would be worse than not being able to quit.
 
 ### Moving it
 

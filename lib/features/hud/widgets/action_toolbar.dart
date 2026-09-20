@@ -333,6 +333,10 @@ class HudShortcuts extends ConsumerWidget {
           shift: true,
         ): () =>
             hud.copyCode(),
+        // No menu bar means no Quit item, so ⌘Q has nothing to bind to unless
+        // it is handled here.
+        const SingleActivator(LogicalKeyboardKey.keyQ, meta: true): () =>
+            hud.quit(),
       },
       child: Focus(autofocus: true, child: child),
     );

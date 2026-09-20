@@ -194,6 +194,12 @@ final class StealthWindowBridge: NSObject {
       snap(window, to: position)
       result(bounds(of: window))
 
+    case "quit":
+      // LSUIElement removes the Dock icon and the menu bar, so there is no
+      // Quit item and no ⌘Q target. Without this the only way out is `pkill`.
+      NSApp.terminate(nil)
+      result(true)
+
     case "startDrag":
       if let event = NSApp.currentEvent {
         window.performDrag(with: event)

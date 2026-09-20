@@ -199,6 +199,30 @@ class GuideTab extends ConsumerWidget {
         ),
 
         const _GuideSection(
+          title: 'QUITTING',
+          body:
+              'xpass runs as an agent: no Dock icon, no menu bar. That is '
+              'what keeps it out of the app switcher, but it also means there '
+              'is no Quit menu.',
+          rows: <({String left, String right})>[
+            (left: '⌘Q', right: 'Quits, when the HUD has keyboard focus'),
+            (
+              left: 'Power',
+              right:
+                  'The icon at the right of the header. Click once to arm, '
+                  'again to quit — it sits next to Panic hide, and quitting '
+                  'mid-interview by accident would be worse than not being '
+                  'able to quit at all',
+            ),
+            (
+              left: '⌘⌥H',
+              right:
+                  'Hides it without quitting, which is usually what you want',
+            ),
+          ],
+        ),
+
+        const _GuideSection(
           title: 'MOVING AND SIZING',
           body:
               'Drag the header to move it. Double-click the header to snap '
