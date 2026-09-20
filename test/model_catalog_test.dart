@@ -27,14 +27,16 @@ ModelCatalogService serviceServing(
 
 Map<String, Object?> geminiModel(
   String id, {
-  List<String> methods = const <String>['generateContent', 'streamGenerateContent'],
-}) =>
-    <String, Object?>{
-      'name': 'models/$id',
-      'displayName': id.toUpperCase(),
-      'supportedGenerationMethods': methods,
-      'inputTokenLimit': 1048576,
-    };
+  List<String> methods = const <String>[
+    'generateContent',
+    'streamGenerateContent',
+  ],
+}) => <String, Object?>{
+  'name': 'models/$id',
+  'displayName': id.toUpperCase(),
+  'supportedGenerationMethods': methods,
+  'inputTokenLimit': 1048576,
+};
 
 void main() {
   group('fetchGeminiModels', () {
@@ -43,13 +45,17 @@ void main() {
         '': <String, Object?>{
           'models': <Object?>[
             geminiModel('gemini-3.5-flash'),
-            geminiModel('gemini-embedding-001', methods: <String>['embedContent']),
+            geminiModel(
+              'gemini-embedding-001',
+              methods: <String>['embedContent'],
+            ),
           ],
         },
       });
 
-      final List<ModelInfo> models =
-          await service.fetchGeminiModels(apiKey: 'k');
+      final List<ModelInfo> models = await service.fetchGeminiModels(
+        apiKey: 'k',
+      );
 
       expect(models.map((ModelInfo m) => m.id), <String>['gemini-3.5-flash']);
     });
@@ -65,11 +71,14 @@ void main() {
         },
       });
 
-      final List<ModelInfo> models =
-          await service.fetchGeminiModels(apiKey: 'k');
+      final List<ModelInfo> models = await service.fetchGeminiModels(
+        apiKey: 'k',
+      );
 
-      expect(models.map((ModelInfo m) => m.id).toSet(),
-          <String>{'gemini-3.5-flash', 'gemini-3.8-flash'});
+      expect(models.map((ModelInfo m) => m.id).toSet(), <String>{
+        'gemini-3.5-flash',
+        'gemini-3.8-flash',
+      });
     });
 
     test('sorts the newest version first', () async {
@@ -83,8 +92,9 @@ void main() {
         },
       });
 
-      final List<ModelInfo> models =
-          await service.fetchGeminiModels(apiKey: 'k');
+      final List<ModelInfo> models = await service.fetchGeminiModels(
+        apiKey: 'k',
+      );
 
       expect(models.first.id, 'gemini-3.8-flash');
       expect(models.last.id, 'gemini-2.5-pro');
@@ -102,8 +112,9 @@ void main() {
         },
       });
 
-      final List<ModelInfo> models =
-          await service.fetchGeminiModels(apiKey: 'k');
+      final List<ModelInfo> models = await service.fetchGeminiModels(
+        apiKey: 'k',
+      );
 
       ModelInfo find(String id) =>
           models.firstWhere((ModelInfo m) => m.id == id);
@@ -118,10 +129,9 @@ void main() {
 
     test('sends the key as a header, never in the URL', () async {
       http.Request? captured;
-      final ModelCatalogService service = serviceServing(
-        <String, Object?>{'': <String, Object?>{'models': <Object?>[]}},
-        onRequest: (http.Request r) => captured = r,
-      );
+      final ModelCatalogService service = serviceServing(<String, Object?>{
+        '': <String, Object?>{'models': <Object?>[]},
+      }, onRequest: (http.Request r) => captured = r);
 
       await service.fetchGeminiModels(apiKey: 'AIza-secret');
 
@@ -130,8 +140,9 @@ void main() {
     });
 
     test('requires a key', () async {
-      final ModelCatalogService service =
-          serviceServing(<String, Object?>{'': <String, Object?>{}});
+      final ModelCatalogService service = serviceServing(<String, Object?>{
+        '': <String, Object?>{},
+      });
 
       expect(
         () => service.fetchGeminiModels(apiKey: ''),
@@ -140,10 +151,9 @@ void main() {
     });
 
     test('explains a rejected key', () async {
-      final ModelCatalogService service = serviceServing(
-        <String, Object?>{'': <String, Object?>{}},
-        status: 403,
-      );
+      final ModelCatalogService service = serviceServing(<String, Object?>{
+        '': <String, Object?>{},
+      }, status: 403);
 
       expect(
         () => service.fetchGeminiModels(apiKey: 'bad'),
@@ -161,24 +171,21 @@ void main() {
   group('fetchNimModels', () {
     test('reads the OpenAI-style list without needing a key', () async {
       http.Request? captured;
-      final ModelCatalogService service = serviceServing(
-        <String, Object?>{
-          '': <String, Object?>{
-            'object': 'list',
-            'data': <Object?>[
-              <String, Object?>{
-                'id': 'nvidia/nemotron-3.5-lightning-30b-a3b',
-                'owned_by': 'nvidia',
-              },
-              <String, Object?>{
-                'id': 'meta/llama-3.2-90b-vision-instruct',
-                'owned_by': 'meta',
-              },
-            ],
-          },
+      final ModelCatalogService service = serviceServing(<String, Object?>{
+        '': <String, Object?>{
+          'object': 'list',
+          'data': <Object?>[
+            <String, Object?>{
+              'id': 'nvidia/nemotron-3.5-lightning-30b-a3b',
+              'owned_by': 'nvidia',
+            },
+            <String, Object?>{
+              'id': 'meta/llama-3.2-90b-vision-instruct',
+              'owned_by': 'meta',
+            },
+          ],
         },
-        onRequest: (http.Request r) => captured = r,
-      );
+      }, onRequest: (http.Request r) => captured = r);
 
       final List<ModelInfo> models = await service.fetchNimModels();
 
@@ -214,10 +221,9 @@ void main() {
 
     test('attaches the key when one is available', () async {
       http.Request? captured;
-      final ModelCatalogService service = serviceServing(
-        <String, Object?>{'': <String, Object?>{'data': <Object?>[]}},
-        onRequest: (http.Request r) => captured = r,
-      );
+      final ModelCatalogService service = serviceServing(<String, Object?>{
+        '': <String, Object?>{'data': <Object?>[]},
+      }, onRequest: (http.Request r) => captured = r);
 
       await service.fetchNimModels(apiKey: 'nvapi-1');
       expect(captured!.headers['Authorization'], 'Bearer nvapi-1');

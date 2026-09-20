@@ -7,7 +7,8 @@ import 'package:xpass/core/models/assist_models.dart';
 import 'package:xpass/core/models/profile_models.dart';
 import 'package:xpass/core/services/portfolio_importer.dart';
 
-const String kBio = '<div><span>I’m <b>Joshua</b>, a multidisciplinary '
+const String kBio =
+    '<div><span>I’m <b>Joshua</b>, a multidisciplinary '
     'technologist &amp; builder.</span></div>';
 
 final List<Map<String, Object?>> kExperience = <Map<String, Object?>>[
@@ -88,10 +89,7 @@ void main() {
     });
 
     test('turns block tags into line breaks', () {
-      expect(
-        PortfolioImporter.stripHtml('<p>one</p><p>two</p>'),
-        'one\ntwo',
-      );
+      expect(PortfolioImporter.stripHtml('<p>one</p><p>two</p>'), 'one\ntwo');
     });
 
     test('decodes numeric entities', () {
@@ -119,8 +117,9 @@ void main() {
     });
 
     test('imports experience with a readable period', () async {
-      final UserProfile profile =
-          await importer.importFrom('https://example.test');
+      final UserProfile profile = await importer.importFrom(
+        'https://example.test',
+      );
 
       final ProfileEntry current = profile.entries.firstWhere(
         (ProfileEntry e) => e.organization == 'Corvendra',
@@ -136,21 +135,24 @@ void main() {
     });
 
     test('derives years of experience from the earliest role', () async {
-      final UserProfile profile =
-          await importer.importFrom('https://example.test');
+      final UserProfile profile = await importer.importFrom(
+        'https://example.test',
+      );
       expect(profile.yearsExperience, contains('since 2020'));
     });
 
     test('strips HTML from the bio into the summary', () async {
-      final UserProfile profile =
-          await importer.importFrom('https://example.test');
+      final UserProfile profile = await importer.importFrom(
+        'https://example.test',
+      );
       expect(profile.summary, startsWith('I’m Joshua'));
       expect(profile.summary, isNot(contains('<')));
     });
 
     test('skips projects marked not visible', () async {
-      final UserProfile profile =
-          await importer.importFrom('https://example.test');
+      final UserProfile profile = await importer.importFrom(
+        'https://example.test',
+      );
 
       expect(
         profile.entries.any((ProfileEntry e) => e.title == 'Hidden project'),
@@ -163,23 +165,30 @@ void main() {
     });
 
     test('records project links and stack as talking points', () async {
-      final UserProfile profile =
-          await importer.importFrom('https://example.test');
+      final UserProfile profile = await importer.importFrom(
+        'https://example.test',
+      );
 
-      final ProfileEntry project =
-          profile.entries.firstWhere((ProfileEntry e) => e.title == 'xMachine');
+      final ProfileEntry project = profile.entries.firstWhere(
+        (ProfileEntry e) => e.title == 'xMachine',
+      );
       expect(project.bullets.first, startsWith('Stack:'));
-      expect(project.bullets.any((String b) => b.startsWith('Source:')), isTrue);
+      expect(
+        project.bullets.any((String b) => b.startsWith('Source:')),
+        isTrue,
+      );
       expect(project.bullets.any((String b) => b.startsWith('Live:')), isTrue);
       expect(project.tags, contains('ml'));
     });
 
     test('folds tech spelling variants when ranking skills', () async {
-      final UserProfile profile =
-          await importer.importFrom('https://example.test');
+      final UserProfile profile = await importer.importFrom(
+        'https://example.test',
+      );
 
-      final ProfileEntry skills = profile.entries
-          .firstWhere((ProfileEntry e) => e.kind == ProfileEntryKind.skill);
+      final ProfileEntry skills = profile.entries.firstWhere(
+        (ProfileEntry e) => e.kind == ProfileEntryKind.skill,
+      );
 
       // "Next.js" and "nextjs" are the same skill across two projects.
       expect(
@@ -219,8 +228,9 @@ void main() {
         '/api/experience': kExperience,
       });
 
-      final UserProfile profile =
-          await partial.importFrom('https://example.test');
+      final UserProfile profile = await partial.importFrom(
+        'https://example.test',
+      );
 
       expect(
         profile.entries.any((ProfileEntry e) => e.organization == 'Corvendra'),
@@ -246,8 +256,9 @@ void main() {
     });
 
     test('tolerates a trailing slash on the base URL', () async {
-      final UserProfile profile =
-          await importer.importFrom('https://example.test/');
+      final UserProfile profile = await importer.importFrom(
+        'https://example.test/',
+      );
       expect(profile.entries, isNotEmpty);
     });
   });

@@ -27,7 +27,8 @@ NvidiaNimService serviceReturning(
   );
 }
 
-String delta(String content) => 'data: ${jsonEncode(<String, Object?>{
+String delta(String content) =>
+    'data: ${jsonEncode(<String, Object?>{
       'choices': <Object?>[
         <String, Object?>{
           'delta': <String, Object?>{'content': content},
@@ -81,10 +82,12 @@ void main() {
     });
 
     test('drops reasoning_content and keeps only the answer', () async {
-      const String reasoning = 'data: {"choices":[{"delta":'
+      const String reasoning =
+          'data: {"choices":[{"delta":'
           '{"reasoning_content":"thinking out loud"}}]}\n\n';
-      final NvidiaNimService service =
-          serviceReturning('$reasoning${delta("Answer")}');
+      final NvidiaNimService service = serviceReturning(
+        '$reasoning${delta("Answer")}',
+      );
 
       final List<String> chunks = await service
           .streamChat(
@@ -129,8 +132,11 @@ void main() {
             .toList(),
         throwsA(
           isA<AiServiceException>()
-              .having((AiServiceException e) => e.message, 'message',
-                  contains('key'))
+              .having(
+                (AiServiceException e) => e.message,
+                'message',
+                contains('key'),
+              )
               .having((AiServiceException e) => e.statusCode, 'status', 401),
         ),
       );

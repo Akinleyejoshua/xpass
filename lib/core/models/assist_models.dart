@@ -18,6 +18,30 @@ enum AssistTier {
   };
 }
 
+/// Which tier a heard question is routed to.
+enum AssistRoute {
+  /// Conceptual question — fast talking points.
+  wingman,
+
+  /// A question about the user — answered from their profile.
+  profile,
+
+  /// A question about something on screen — capture, then solve.
+  screen,
+}
+
+/// Which surface the HUD body is showing.
+enum HudPane {
+  /// The current answer.
+  answer,
+
+  /// The running record of what has been asked and what was said back.
+  notes,
+
+  /// Configuration.
+  settings,
+}
+
 /// Coarse HUD state, drives the status dot and header copy.
 enum HudStatus {
   idle,
@@ -73,6 +97,32 @@ class AssistTurn {
   bool wasCancelled = false;
 
   bool get hasContent => body.value.isNotEmpty;
+
+  /// True when the question arrived from the call rather than the ask box.
+  bool wasHeard = false;
+
+  /// The one line worth remembering, for the notes list.
+  ///
+  /// Takes the first real sentence of the answer, skipping headings and
+  /// stopping before any code — a fenced block is useless as a reminder of
+  /// what was said out loud.
+  String get gist {
+    final String text = body.value;
+    if (text.isEmpty) return '';
+
+    for (final String rawLine in text.split('\n')) {
+      final String line = rawLine.trim();
+      if (line.isEmpty || line.startsWith('#')) continue;
+      if (line.startsWith('```')) break;
+
+      final String cleaned = line
+          .replaceFirst(RegExp(r'^[-*+]\s*'), '')
+          .replaceAll(RegExp(r'[*_`]'), '')
+          .trim();
+      if (cleaned.isNotEmpty) return cleaned;
+    }
+    return '';
+  }
 
   void dispose() => body.dispose();
 }

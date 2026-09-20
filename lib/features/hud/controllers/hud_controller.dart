@@ -90,8 +90,10 @@ class HudController extends ChangeNotifier {
   bool _screenPermission = false;
   bool get hasScreenPermission => _screenPermission;
 
-  bool _settingsOpen = false;
-  bool get isSettingsOpen => _settingsOpen;
+  HudPane _pane = HudPane.answer;
+  HudPane get pane => _pane;
+  bool get isSettingsOpen => _pane == HudPane.settings;
+  bool get isNotesOpen => _pane == HudPane.notes;
 
   /// Last frame sent to Gemini, shown as a thumbnail on the active turn.
   Uint8List? _lastFrame;
@@ -142,7 +144,7 @@ class HudController extends ChangeNotifier {
         'Add an API key in Settings to start. ⌘⌥H hides xpass instantly.',
         isError: false,
       );
-      _settingsOpen = true;
+      _pane = HudPane.settings;
     } else {
       await startListening();
     }
@@ -374,8 +376,97 @@ class HudController extends ChangeNotifier {
     if (settings.value.autoAnswer &&
         event.source == AudioSource.system &&
         _looksLikeQuestion(event.text)) {
-      unawaited(askFast(event.text));
+      unawaited(answerHeardQuestion(event.text));
     }
+  }
+
+  /// Answers a question picked up from the call, choosing the tier for it.
+  ///
+  /// This is the whole point of listening: by the time the interviewer stops
+  /// talking, the right engine is already streaming. Routing happens locally
+  /// on the transcript, so it costs nothing and adds no latency.
+  Future<void> answerHeardQuestion(String question) {
+    final AssistRoute route = routeFor(
+      question,
+      profileReady:
+          settings.value.groundInProfile && profile.profile.isConfigured,
+      screenEnabled: settings.value.autoScreenSolve,
+    );
+
+    return switch (route) {
+      AssistRoute.screen => captureAndSolve(question: question, heard: true),
+      AssistRoute.profile => askAboutMe(question, heard: true),
+      AssistRoute.wingman => askFast(question, heard: true),
+    };
+  }
+
+  /// Picks the tier for a question heard on the call.
+  ///
+  /// Screen is tested first: a demonstrative reference ("this function", "the
+  /// error here") is the strongest signal in the sentence, and it names the one
+  /// resource the other two tiers cannot see. Profile comes next because it is
+  /// specific about past experience. Everything else is conceptual.
+  static AssistRoute routeFor(
+    String question, {
+    required bool profileReady,
+    required bool screenEnabled,
+  }) {
+    if (screenEnabled && looksLikeScreenQuestion(question)) {
+      return AssistRoute.screen;
+    }
+    if (profileReady && ProfileService.looksLikeProfileQuestion(question)) {
+      return AssistRoute.profile;
+    }
+    return AssistRoute.wingman;
+  }
+
+  /// True when the question refers to something the user is looking at.
+  ///
+  /// Requires a demonstrative ("this", "that", "here", "on the screen") tied to
+  /// something technical, or an imperative aimed at existing code. A bare
+  /// "implement a queue" is deliberately *not* a screen question — it is
+  /// answerable from the words alone, and capturing a frame for it would spend
+  /// a request and a second of latency for nothing.
+  static bool looksLikeScreenQuestion(String text) {
+    final String lower = text.toLowerCase().trim();
+    if (lower.isEmpty) return false;
+
+    const List<String> explicit = <String>[
+      'on the screen',
+      'on your screen',
+      'what you see',
+      'what do you see',
+      'in the editor',
+      'in your editor',
+      'share your screen',
+    ];
+    if (explicit.any(lower.contains)) return true;
+
+    // "fix this", "debug that", "what is wrong with this"
+    final bool imperativeOnExisting = RegExp(
+      r'\b(fix|debug|refactor|optimi[sz]e|improve|review|trace|profile|'
+      r'rewrite|simplify)\s+(this|that|it|the)\b',
+    ).hasMatch(lower);
+    if (imperativeOnExisting) return true;
+
+    if (RegExp(r"what'?s wrong with (this|that|it|the)\b").hasMatch(lower)) {
+      return true;
+    }
+
+    // A demonstrative attached to something technical and visible.
+    final bool demonstrative = RegExp(
+      r'\b(this|that|these|those|the)\s+'
+      r'(code|function|method|class|snippet|query|schema|diagram|'
+      r'error|exception|stack\s?trace|bug|test|failure|output|log|'
+      r'problem|question|implementation|solution|algorithm|signature)\b',
+    ).hasMatch(lower);
+    if (demonstrative) return true;
+
+    // "walk me through this", "explain what is happening here"
+    return RegExp(
+      r'\b(walk me through|explain|talk me through|step through)\b'
+      r'.*\b(this|that|here)\b',
+    ).hasMatch(lower);
   }
 
   /// Heuristic for "the interviewer just asked me something".
@@ -434,7 +525,7 @@ class HudController extends ChangeNotifier {
   /// Questions about the user go to the profile-grounded persona instead, so
   /// "tell me about a time you led a migration" is answered from their real
   /// history rather than improvised.
-  Future<void> askFast(String question) async {
+  Future<void> askFast(String question, {bool heard = false}) async {
     final XpSettings config = settings.value;
     if (!config.hasNvidiaKey) {
       _setBanner(
@@ -447,10 +538,10 @@ class HudController extends ChangeNotifier {
     if (settings.value.groundInProfile &&
         profile.profile.isConfigured &&
         ProfileService.looksLikeProfileQuestion(question)) {
-      return askAboutMe(question);
+      return askAboutMe(question, heard: heard);
     }
 
-    final AssistTurn turn = _beginTurn(AssistTier.fast, question);
+    final AssistTurn turn = _beginTurn(AssistTier.fast, question, heard: heard);
     final String persona = config.fastPromptOverride.trim().isEmpty
         ? XpPrompts.fastWingman
         : config.fastPromptOverride;
@@ -480,7 +571,7 @@ class HudController extends ChangeNotifier {
   /// Retrieval runs locally over the profile entries and only the top matches
   /// are sent, which keeps the prompt small enough to stay inside the
   /// sub-second budget even with a large background.
-  Future<void> askAboutMe(String question) async {
+  Future<void> askAboutMe(String question, {bool heard = false}) async {
     final XpSettings config = settings.value;
     if (!config.hasNvidiaKey) {
       _setBanner(
@@ -498,7 +589,11 @@ class HudController extends ChangeNotifier {
     }
 
     final String context = profile.contextFor(question, limit: 5);
-    final AssistTurn turn = _beginTurn(AssistTier.profile, question);
+    final AssistTurn turn = _beginTurn(
+      AssistTier.profile,
+      question,
+      heard: heard,
+    );
 
     await _consume(
       turn,
@@ -547,7 +642,7 @@ class HudController extends ChangeNotifier {
   // ------------------------------------------------------------ tier 2: deep
 
   /// Screenshot the active region and stream a full solve from Gemini.
-  Future<void> captureAndSolve({String? question}) async {
+  Future<void> captureAndSolve({String? question, bool heard = false}) async {
     final XpSettings config = settings.value;
     if (!config.hasGeminiKey) {
       _setBanner(
@@ -581,6 +676,7 @@ class HudController extends ChangeNotifier {
       AssistTier.deep,
       question ?? 'Screen solve · ${frame.width}×${frame.height}',
       thumbnail: frame.jpeg,
+      heard: heard,
     );
 
     final String persona = config.deepPromptOverride.trim().isEmpty
@@ -618,7 +714,12 @@ class HudController extends ChangeNotifier {
 
   // -------------------------------------------------------------- turn plumbing
 
-  AssistTurn _beginTurn(AssistTier tier, String query, {Uint8List? thumbnail}) {
+  AssistTurn _beginTurn(
+    AssistTier tier,
+    String query, {
+    Uint8List? thumbnail,
+    bool heard = false,
+  }) {
     _cancelActiveTurn();
 
     final AssistTurn turn = AssistTurn(
@@ -634,6 +735,7 @@ class HudController extends ChangeNotifier {
       _history.removeLast().dispose();
     }
 
+    turn.wasHeard = heard;
     _current = turn;
     _pendingText.clear();
     _setStatus(HudStatus.thinking);
@@ -750,7 +852,8 @@ class HudController extends ChangeNotifier {
 
   Future<void> toggleClickThrough() async {
     _clickThrough = await window.toggleClickThrough();
-    if (_clickThrough && _settingsOpen) _settingsOpen = false;
+    // A click-through HUD cannot receive the clicks Settings needs.
+    if (_clickThrough && _pane == HudPane.settings) _pane = HudPane.answer;
     _setBanner(
       _clickThrough
           ? 'Click-through on — typing goes to the app underneath.'
@@ -767,9 +870,20 @@ class HudController extends ChangeNotifier {
 
   Future<void> snap(HudAnchor anchor) => window.snapTo(anchor);
 
-  void toggleSettings() {
-    _settingsOpen = !_settingsOpen;
-    if (_settingsOpen) {
+  void toggleSettings() =>
+      showPane(_pane == HudPane.settings ? HudPane.answer : HudPane.settings);
+
+  void toggleNotes() =>
+      showPane(_pane == HudPane.notes ? HudPane.answer : HudPane.notes);
+
+  void closeSettings() => showPane(HudPane.answer);
+
+  void showPane(HudPane next) {
+    if (_pane == next) return;
+    _pane = next;
+    // Settings has text fields, so it needs the keyboard; the other panes must
+    // hand focus straight back to whatever the user was really working in.
+    if (next == HudPane.settings) {
       unawaited(window.focus());
     } else {
       unawaited(window.releaseFocus());
@@ -777,12 +891,20 @@ class HudController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void closeSettings() {
-    if (!_settingsOpen) return;
-    _settingsOpen = false;
-    unawaited(window.releaseFocus());
+  /// Bring a past answer back into the answer pane.
+  void restoreTurn(String id) {
+    final int index = _history.indexWhere((AssistTurn t) => t.id == id);
+    if (index < 0) return;
+
+    final AssistTurn turn = _history.removeAt(index);
+    if (_current != null) _history.insert(0, _current!);
+    _current = turn;
+    showPane(HudPane.answer);
     notifyListeners();
   }
+
+  /// Everything asked this session, newest first — the running notes.
+  List<AssistTurn> get notes => <AssistTurn>[?_current, ..._history];
 
   // -------------------------------------------------------------------- reset
 

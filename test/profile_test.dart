@@ -3,47 +3,47 @@ import 'package:xpass/core/models/profile_models.dart';
 import 'package:xpass/core/services/profile_service.dart';
 
 UserProfile buildProfile() => const UserProfile(
-      name: 'Joshua Akinleye',
-      headline: 'Full Stack Developer · AI/ML',
-      summary: 'I build data-heavy products end to end.',
-      yearsExperience: '6+ years',
-      entries: <ProfileEntry>[
-        ProfileEntry(
-          id: 'e1',
-          kind: ProfileEntryKind.experience,
-          title: 'Conversational A.I Scientist',
-          organization: 'Smartecniqs',
-          period: '2022 – 2023',
-          bullets: <String>[
-            'Built and trained machine learning models',
-            'Implemented NLP solutions for business applications',
-          ],
-          tags: <String>['nlp', 'machine', 'learning'],
-        ),
-        ProfileEntry(
-          id: 'e2',
-          kind: ProfileEntryKind.project,
-          title: 'xMachine',
-          summary: 'Browser-based deep learning and inference platform.',
-          bullets: <String>['Stack: TensorFlow.js, WebGPU, Next.js'],
-          tags: <String>['tensorflow.js', 'webgpu', 'next.js', 'ml'],
-        ),
-        ProfileEntry(
-          id: 'e3',
-          kind: ProfileEntryKind.project,
-          title: 'Ultra Share Pro',
-          summary: 'Peer-to-peer file sharing over WebRTC.',
-          tags: <String>['webrtc', 'socket.io', 'web'],
-        ),
-        ProfileEntry(
-          id: 'q1',
-          kind: ProfileEntryKind.question,
-          title: 'What is your biggest weakness?',
-          summary: 'I over-invest in tooling early. I now timebox it.',
-          tags: <String>['weakness', 'improve'],
-        ),
+  name: 'Joshua Akinleye',
+  headline: 'Full Stack Developer · AI/ML',
+  summary: 'I build data-heavy products end to end.',
+  yearsExperience: '6+ years',
+  entries: <ProfileEntry>[
+    ProfileEntry(
+      id: 'e1',
+      kind: ProfileEntryKind.experience,
+      title: 'Conversational A.I Scientist',
+      organization: 'Smartecniqs',
+      period: '2022 – 2023',
+      bullets: <String>[
+        'Built and trained machine learning models',
+        'Implemented NLP solutions for business applications',
       ],
-    );
+      tags: <String>['nlp', 'machine', 'learning'],
+    ),
+    ProfileEntry(
+      id: 'e2',
+      kind: ProfileEntryKind.project,
+      title: 'xMachine',
+      summary: 'Browser-based deep learning and inference platform.',
+      bullets: <String>['Stack: TensorFlow.js, WebGPU, Next.js'],
+      tags: <String>['tensorflow.js', 'webgpu', 'next.js', 'ml'],
+    ),
+    ProfileEntry(
+      id: 'e3',
+      kind: ProfileEntryKind.project,
+      title: 'Ultra Share Pro',
+      summary: 'Peer-to-peer file sharing over WebRTC.',
+      tags: <String>['webrtc', 'socket.io', 'web'],
+    ),
+    ProfileEntry(
+      id: 'q1',
+      kind: ProfileEntryKind.question,
+      title: 'What is your biggest weakness?',
+      summary: 'I over-invest in tooling early. I now timebox it.',
+      tags: <String>['weakness', 'improve'],
+    ),
+  ],
+);
 
 void main() {
   group('retrieval', () {
@@ -62,8 +62,9 @@ void main() {
     });
 
     test('prefers a prepared answer for the question it answers', () {
-      final List<ScoredEntry> hits =
-          service.retrieve('what is your biggest weakness?');
+      final List<ScoredEntry> hits = service.retrieve(
+        'what is your biggest weakness?',
+      );
       expect(hits.first.entry.kind, ProfileEntryKind.question);
     });
 
@@ -72,8 +73,10 @@ void main() {
     });
 
     test('respects the result limit', () {
-      final List<ScoredEntry> hits =
-          service.retrieve('machine learning webrtc platform', limit: 2);
+      final List<ScoredEntry> hits = service.retrieve(
+        'machine learning webrtc platform',
+        limit: 2,
+      );
       expect(hits.length, lessThanOrEqualTo(2));
     });
   });
@@ -99,8 +102,7 @@ void main() {
     });
 
     test('is empty for an empty profile', () {
-      final ProfileService empty =
-          ProfileService.inMemory(const UserProfile());
+      final ProfileService empty = ProfileService.inMemory(const UserProfile());
       expect(empty.contextFor('anything'), isEmpty);
     });
   });
@@ -174,15 +176,19 @@ Built an internal analytics platform.
       expect(experience.bullets.first, contains('p99'));
 
       expect(
-        parsed.entries.any((ProfileEntry e) => e.kind == ProfileEntryKind.project),
+        parsed.entries.any(
+          (ProfileEntry e) => e.kind == ProfileEntryKind.project,
+        ),
         isTrue,
       );
     });
 
     test('preserves prepared answers already written', () {
       final UserProfile base = buildProfile();
-      final UserProfile merged =
-          ProfileService.parseMarkdownResume('## Skills\n- Dart', base: base);
+      final UserProfile merged = ProfileService.parseMarkdownResume(
+        '## Skills\n- Dart',
+        base: base,
+      );
 
       expect(
         merged.entries.any(

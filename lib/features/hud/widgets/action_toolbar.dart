@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/colors.dart';
+import '../../../core/models/assist_models.dart';
 import '../../../core/constants/typography.dart';
 import '../../../core/providers.dart';
 import '../../../core/services/window_service.dart';
@@ -320,8 +321,8 @@ class HudShortcuts extends ConsumerWidget {
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.escape): () {
-          if (hud.isSettingsOpen) {
-            hud.closeSettings();
+          if (hud.pane != HudPane.answer) {
+            hud.showPane(HudPane.answer);
           } else {
             hud.hide();
           }

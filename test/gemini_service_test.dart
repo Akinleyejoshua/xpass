@@ -27,7 +27,8 @@ GeminiService serviceReturning(
   );
 }
 
-String textEvent(String text) => 'data: ${jsonEncode(<String, Object?>{
+String textEvent(String text) =>
+    'data: ${jsonEncode(<String, Object?>{
       'candidates': <Object?>[
         <String, Object?>{
           'content': <String, Object?>{
@@ -58,39 +59,44 @@ void main() {
       expect(chunks.join(), contains('sliding window'));
     });
 
-    test('sends the image before the text and keeps the key in a header',
-        () async {
-      http.BaseRequest? captured;
-      final GeminiService service = serviceReturning(
-        textEvent('ok'),
-        onRequest: (http.BaseRequest r) => captured = r,
-      );
+    test(
+      'sends the image before the text and keeps the key in a header',
+      () async {
+        http.BaseRequest? captured;
+        final GeminiService service = serviceReturning(
+          textEvent('ok'),
+          onRequest: (http.BaseRequest r) => captured = r,
+        );
 
-      await service
-          .streamGenerate(
-            apiKey: 'AIza-secret',
-            model: 'gemini-2.5-pro',
-            systemInstruction: 'persona',
-            userText: 'solve',
-            imageJpeg: Uint8List.fromList(<int>[1, 2, 3]),
-          )
-          .drain<void>();
+        await service
+            .streamGenerate(
+              apiKey: 'AIza-secret',
+              model: 'gemini-2.5-pro',
+              systemInstruction: 'persona',
+              userText: 'solve',
+              imageJpeg: Uint8List.fromList(<int>[1, 2, 3]),
+            )
+            .drain<void>();
 
-      expect(captured!.headers['x-goog-api-key'], 'AIza-secret');
-      expect(
-        captured!.url.toString(),
-        isNot(contains('AIza-secret')),
-        reason: 'the key must never appear in a URL',
-      );
-      expect(captured!.url.queryParameters['alt'], 'sse');
+        expect(captured!.headers['x-goog-api-key'], 'AIza-secret');
+        expect(
+          captured!.url.toString(),
+          isNot(contains('AIza-secret')),
+          reason: 'the key must never appear in a URL',
+        );
+        expect(captured!.url.queryParameters['alt'], 'sse');
 
-      final Map<String, Object?> body =
-          jsonDecode((captured! as http.Request).body) as Map<String, Object?>;
-      final List<Object?> parts = ((body['contents']! as List<Object?>).first
-          as Map<String, Object?>)['parts']! as List<Object?>;
-      expect((parts.first as Map<String, Object?>)['inlineData'], isNotNull);
-      expect((parts.last as Map<String, Object?>)['text'], 'solve');
-    });
+        final Map<String, Object?> body =
+            jsonDecode((captured! as http.Request).body)
+                as Map<String, Object?>;
+        final List<Object?> parts =
+            ((body['contents']! as List<Object?>).first
+                    as Map<String, Object?>)['parts']!
+                as List<Object?>;
+        expect((parts.first as Map<String, Object?>)['inlineData'], isNotNull);
+        expect((parts.last as Map<String, Object?>)['text'], 'solve');
+      },
+    );
 
     test('reports a safety block as an error, not silence', () async {
       final GeminiService service = serviceReturning(
@@ -165,7 +171,9 @@ void main() {
             <String, Object?>{
               'content': <String, Object?>{
                 'parts': <Object?>[
-                  <String, Object?>{'text': '  So walk me through your stack. '},
+                  <String, Object?>{
+                    'text': '  So walk me through your stack. ',
+                  },
                 ],
               },
             },
@@ -182,13 +190,11 @@ void main() {
     });
 
     test('returns empty when the model heard nothing', () async {
-      final GeminiService service =
-          serviceReturning(jsonEncode(<String, Object?>{'candidates': <Object?>[]}));
-
-      expect(
-        await service.transcribe(apiKey: 'k', wav: Uint8List(8)),
-        isEmpty,
+      final GeminiService service = serviceReturning(
+        jsonEncode(<String, Object?>{'candidates': <Object?>[]}),
       );
+
+      expect(await service.transcribe(apiKey: 'k', wav: Uint8List(8)), isEmpty);
     });
   });
 }

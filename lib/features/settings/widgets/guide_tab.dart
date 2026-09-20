@@ -101,11 +101,51 @@ class GuideTab extends ConsumerWidget {
           body:
               'While listening, xpass transcribes the other side of the call '
               'and answers questions as they land, so you can read while they '
-              'are still finishing the sentence. The footer shows two level '
-              'meters: MIC is you, SYS is them. If SYS never moves, xpass '
-              'cannot hear the call — check Screen Recording and relaunch.\n\n'
-              'Turn this off with "Answer automatically" under Models if you '
-              'would rather drive everything by hand.',
+              'are still finishing the sentence. It picks the engine from the '
+              'question itself — you never have to choose:',
+          rows: <({String left, String right})>[
+            (
+              left: 'Screen',
+              right:
+                  '"What is wrong with this function?" — a demonstrative '
+                  'pointing at something visible grabs a frame first',
+            ),
+            (
+              left: 'You',
+              right: '"Tell me about a time you…" — answered from your profile',
+            ),
+            (
+              left: 'Wingman',
+              right: 'everything else — "how would you scale this service?"',
+            ),
+          ],
+        ),
+
+        const _GuideSection(
+          title: 'NOTES',
+          body:
+              'The notes icon in the header keeps every question of the '
+              'session — heard or typed — with the engine that answered, the '
+              'first line of what it said, and how fast it arrived. Click any '
+              'entry to bring that answer back.\n\n'
+              'This is what makes a long call workable: an answer that '
+              'scrolled away is still reachable, and "do you have questions '
+              'for us?" is easier when you can see what ground was covered.',
+          rows: <({String left, String right})>[],
+        ),
+
+        const _GuideSection(
+          title: 'HEARING THE CALL',
+          body:
+              'The footer shows two level meters: MIC is you, SYS is them. '
+              'xpass tells you apart by capture path, not by voice — SYS is '
+              'the system-audio loopback, so anything your speakers play is '
+              '"them". If SYS never moves, xpass cannot hear the call: check '
+              'Screen Recording and relaunch.\n\n'
+              'Use headphones. On speakers their voice re-enters your '
+              'microphone and registers on both meters.\n\n'
+              'Turn all of this off with "Answer automatically" under Models '
+              'if you would rather drive everything by hand.',
           rows: <({String left, String right})>[],
         ),
 

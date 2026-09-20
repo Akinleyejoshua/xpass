@@ -34,7 +34,11 @@ void main() {
 
     test('ignores comments, CRLF and other fields', () async {
       final List<String> events = await decodeSseData(
-        chunks(<String>[': keep-alive\r\n', 'event: msg\r\n', 'data: hi\r\n\r\n']),
+        chunks(<String>[
+          ': keep-alive\r\n',
+          'event: msg\r\n',
+          'data: hi\r\n\r\n',
+        ]),
       ).toList();
 
       expect(events, <String>['hi']);
@@ -49,29 +53,34 @@ void main() {
       expect(events, <String>[' padded']);
     });
 
-    test('reassembles a multi-byte character split across TCP chunks',
-        () async {
-      // "é" is 0xC3 0xA9 — arriving in two separate network reads.
-      final List<int> encoded = utf8.encode('data: café\n\n');
-      final int split = encoded.indexOf(0xC3) + 1;
+    test(
+      'reassembles a multi-byte character split across TCP chunks',
+      () async {
+        // "é" is 0xC3 0xA9 — arriving in two separate network reads.
+        final List<int> encoded = utf8.encode('data: café\n\n');
+        final int split = encoded.indexOf(0xC3) + 1;
 
-      final List<String> events = await decodeSseData(
-        Stream<List<int>>.fromIterable(<List<int>>[
-          encoded.sublist(0, split),
-          encoded.sublist(split),
-        ]),
-      ).toList();
+        final List<String> events = await decodeSseData(
+          Stream<List<int>>.fromIterable(<List<int>>[
+            encoded.sublist(0, split),
+            encoded.sublist(split),
+          ]),
+        ).toList();
 
-      expect(events, <String>['café']);
-    });
+        expect(events, <String>['café']);
+      },
+    );
 
-    test('emits a trailing event when the server closes without a blank line',
-        () async {
-      final List<String> events =
-          await decodeSseData(chunks(<String>['data: last\n'])).toList();
+    test(
+      'emits a trailing event when the server closes without a blank line',
+      () async {
+        final List<String> events = await decodeSseData(
+          chunks(<String>['data: last\n']),
+        ).toList();
 
-      expect(events, <String>['last']);
-    });
+        expect(events, <String>['last']);
+      },
+    );
 
     test('skips empty keep-alive blocks', () async {
       final List<String> events = await decodeSseData(

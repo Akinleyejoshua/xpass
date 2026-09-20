@@ -63,6 +63,7 @@ class XpSettings {
     this.micEnabled = true,
     this.systemAudioEnabled = true,
     this.autoAnswer = true,
+    this.autoScreenSolve = true,
     this.transcriptionBackend = TranscriptionBackend.geminiBatch,
     this.transcriptionRpm = 12,
     this.transcribeMic = false,
@@ -150,8 +151,13 @@ class XpSettings {
   final bool micEnabled;
   final bool systemAudioEnabled;
 
-  /// Fire a tier-1 answer automatically when the interviewer stops talking.
+  /// Fire an answer automatically when the interviewer stops talking.
   final bool autoAnswer;
+
+  /// Let an automatic answer capture the screen when the question points at
+  /// something visible ("what is wrong with this function?"). Off means those
+  /// questions fall back to a conceptual answer instead.
+  final bool autoScreenSolve;
   final TranscriptionBackend transcriptionBackend;
 
   /// Cap on transcription requests per minute. One utterance is one request,
@@ -201,6 +207,7 @@ class XpSettings {
     bool? micEnabled,
     bool? systemAudioEnabled,
     bool? autoAnswer,
+    bool? autoScreenSolve,
     TranscriptionBackend? transcriptionBackend,
     int? transcriptionRpm,
     bool? transcribeMic,
@@ -228,6 +235,7 @@ class XpSettings {
       micEnabled: micEnabled ?? this.micEnabled,
       systemAudioEnabled: systemAudioEnabled ?? this.systemAudioEnabled,
       autoAnswer: autoAnswer ?? this.autoAnswer,
+      autoScreenSolve: autoScreenSolve ?? this.autoScreenSolve,
       transcriptionBackend: transcriptionBackend ?? this.transcriptionBackend,
       transcriptionRpm: transcriptionRpm ?? this.transcriptionRpm,
       transcribeMic: transcribeMic ?? this.transcribeMic,
@@ -309,6 +317,7 @@ class SettingsController extends ChangeNotifier {
       micEnabled: prefs.getBool('micEnabled') ?? true,
       systemAudioEnabled: prefs.getBool('systemAudioEnabled') ?? true,
       autoAnswer: prefs.getBool('autoAnswer') ?? true,
+      autoScreenSolve: prefs.getBool('autoScreenSolve') ?? true,
       transcriptionBackend: TranscriptionBackend.fromName(
         prefs.getString('transcriptionBackend'),
       ),
@@ -355,6 +364,7 @@ class SettingsController extends ChangeNotifier {
       _prefs.setBool('micEnabled', next.micEnabled),
       _prefs.setBool('systemAudioEnabled', next.systemAudioEnabled),
       _prefs.setBool('autoAnswer', next.autoAnswer),
+      _prefs.setBool('autoScreenSolve', next.autoScreenSolve),
       _prefs.setString('transcriptionBackend', next.transcriptionBackend.name),
       _prefs.setInt('transcriptionRpm', next.transcriptionRpm),
       _prefs.setBool('transcribeMic', next.transcribeMic),

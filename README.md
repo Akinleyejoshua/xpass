@@ -90,9 +90,40 @@ The switch to its left picks the engine:
 ### Automatic answers
 
 While listening, xpass transcribes the other side and answers questions as they
-land, so you can read while they are still finishing the sentence. Behavioural
-questions are routed to your profile automatically. Turn it off with **Answer
-automatically** under Models.
+land, so you can read while they are still finishing the sentence. It picks the
+engine from the question itself:
+
+| Question | Routed to | Why |
+|---|---|---|
+| "What's wrong with this function?" | **Screen** | a demonstrative pointing at something visible — captures a frame first |
+| "Tell me about a time you led a migration" | **You** | past-experience phrasing — answered from your profile |
+| "How would you scale this to 10M users?" | **Wingman** | self-contained, answerable from the words alone |
+
+Screen is tested first: a demonstrative names the one resource the other two
+tiers cannot see. A bare "implement a queue using two stacks" deliberately does
+*not* capture — it is answerable from the words, and a frame would cost a
+request and a second of latency for nothing.
+
+Toggle the whole thing with **Answer automatically**, and just the capture half
+with **Capture the screen when asked about it**, both under Models.
+
+### Notes
+
+The notes icon in the header keeps every question of the session — heard or
+typed — with the tier that answered, the first line of the answer, and its
+time-to-first-token. Click an entry to bring that answer back. Cleared by
+`⌘⌥⌫` along with everything else.
+
+### How it knows who is talking
+
+By capture path, not by voice. `SYS` is the ScreenCaptureKit system-audio
+loopback — anything your speakers play is "them". `MIC` is you. There is no
+diarization, so a panel of three interviewers is one undifferentiated "Them".
+
+**Use headphones.** On speakers, their voice re-enters your microphone and
+registers on both meters. Mic transcription is off by default, which keeps that
+harmless; turning it on while using speakers would transcribe their words as
+yours.
 
 ### Moving it
 
@@ -204,10 +235,10 @@ Platform channels: `com.xpass.app/window`, `/media`, `/audio`, `/hotkeys`.
 flutter test
 ```
 
-98 tests covering the SSE parser, the VAD state machine and its noise
+114 tests covering the SSE parser, the VAD state machine and its noise
 estimator, WAV framing, profile retrieval and résumé parsing, both model
 services against mocked HTTP, the model catalogue, the portfolio importer, the
-rate limiter, and code-block extraction.
+rate limiter, question routing across the three tiers, and answer extraction.
 
 There is no widget-level test: mounting the full HUD tree crashes the test
 harness, and a red suite is worse than an honest gap.

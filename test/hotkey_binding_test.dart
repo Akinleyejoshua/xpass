@@ -42,9 +42,11 @@ void main() {
     });
 
     test('builds channel arguments the Swift side expects', () {
-      final Map<String, Object?> args =
-          const HotkeyBinding(keyCode: MacKeyCodes.keyT, command: true, option: true)
-              .toChannelArgs('clickThrough');
+      final Map<String, Object?> args = const HotkeyBinding(
+        keyCode: MacKeyCodes.keyT,
+        command: true,
+        option: true,
+      ).toChannelArgs('clickThrough');
 
       expect(args['id'], 'clickThrough');
       expect(args['keyCode'], MacKeyCodes.keyT);
@@ -130,15 +132,32 @@ void main() {
 
     test('maps every A–Z key', () {
       const List<LogicalKeyboardKey> letters = <LogicalKeyboardKey>[
-        LogicalKeyboardKey.keyA, LogicalKeyboardKey.keyB, LogicalKeyboardKey.keyC,
-        LogicalKeyboardKey.keyD, LogicalKeyboardKey.keyE, LogicalKeyboardKey.keyF,
-        LogicalKeyboardKey.keyG, LogicalKeyboardKey.keyH, LogicalKeyboardKey.keyI,
-        LogicalKeyboardKey.keyJ, LogicalKeyboardKey.keyK, LogicalKeyboardKey.keyL,
-        LogicalKeyboardKey.keyM, LogicalKeyboardKey.keyN, LogicalKeyboardKey.keyO,
-        LogicalKeyboardKey.keyP, LogicalKeyboardKey.keyQ, LogicalKeyboardKey.keyR,
-        LogicalKeyboardKey.keyS, LogicalKeyboardKey.keyT, LogicalKeyboardKey.keyU,
-        LogicalKeyboardKey.keyV, LogicalKeyboardKey.keyW, LogicalKeyboardKey.keyX,
-        LogicalKeyboardKey.keyY, LogicalKeyboardKey.keyZ,
+        LogicalKeyboardKey.keyA,
+        LogicalKeyboardKey.keyB,
+        LogicalKeyboardKey.keyC,
+        LogicalKeyboardKey.keyD,
+        LogicalKeyboardKey.keyE,
+        LogicalKeyboardKey.keyF,
+        LogicalKeyboardKey.keyG,
+        LogicalKeyboardKey.keyH,
+        LogicalKeyboardKey.keyI,
+        LogicalKeyboardKey.keyJ,
+        LogicalKeyboardKey.keyK,
+        LogicalKeyboardKey.keyL,
+        LogicalKeyboardKey.keyM,
+        LogicalKeyboardKey.keyN,
+        LogicalKeyboardKey.keyO,
+        LogicalKeyboardKey.keyP,
+        LogicalKeyboardKey.keyQ,
+        LogicalKeyboardKey.keyR,
+        LogicalKeyboardKey.keyS,
+        LogicalKeyboardKey.keyT,
+        LogicalKeyboardKey.keyU,
+        LogicalKeyboardKey.keyV,
+        LogicalKeyboardKey.keyW,
+        LogicalKeyboardKey.keyX,
+        LogicalKeyboardKey.keyY,
+        LogicalKeyboardKey.keyZ,
       ];
       for (final LogicalKeyboardKey key in letters) {
         expect(

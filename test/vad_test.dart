@@ -6,11 +6,11 @@ import 'package:xpass/core/utils/vad.dart';
 
 /// One 100 ms frame of 16 kHz mono Int16 at the given loudness.
 AudioFrame frame(double rms) => AudioFrame(
-      source: AudioSource.system,
-      pcm: Uint8List(3200),
-      rms: rms,
-      sampleRate: 16000,
-    );
+  source: AudioSource.system,
+  pcm: Uint8List(3200),
+  rms: rms,
+  sampleRate: 16000,
+);
 
 const double quiet = 0.001;
 const double loud = 0.2;
@@ -18,17 +18,23 @@ const double loud = 0.2;
 void main() {
   group('VoiceActivityDetector', () {
     test('opens only after enough consecutive loud frames', () {
-      final VoiceActivityDetector vad =
-          VoiceActivityDetector(source: AudioSource.system);
+      final VoiceActivityDetector vad = VoiceActivityDetector(
+        source: AudioSource.system,
+      );
 
-      expect(vad.process(frame(loud)), isNull, reason: 'one frame is not speech');
+      expect(
+        vad.process(frame(loud)),
+        isNull,
+        reason: 'one frame is not speech',
+      );
       expect(vad.process(frame(loud)), isA<VadSpeechStart>());
       expect(vad.isSpeaking, isTrue);
     });
 
     test('emits a segment after the hangover expires', () {
-      final VoiceActivityDetector vad =
-          VoiceActivityDetector(source: AudioSource.system);
+      final VoiceActivityDetector vad = VoiceActivityDetector(
+        source: AudioSource.system,
+      );
 
       for (int i = 0; i < 3; i++) {
         vad.process(frame(quiet));
@@ -52,8 +58,9 @@ void main() {
     });
 
     test('keeps preroll so the first syllable is not clipped', () {
-      final VoiceActivityDetector vad =
-          VoiceActivityDetector(source: AudioSource.mic);
+      final VoiceActivityDetector vad = VoiceActivityDetector(
+        source: AudioSource.mic,
+      );
 
       // Three quiet frames, then speech: the segment should contain more audio
       // than just the frames that arrived after the gate opened.
@@ -112,8 +119,9 @@ void main() {
     });
 
     test('adapts to a noisy room instead of latching open', () {
-      final VoiceActivityDetector vad =
-          VoiceActivityDetector(source: AudioSource.system);
+      final VoiceActivityDetector vad = VoiceActivityDetector(
+        source: AudioSource.system,
+      );
 
       // Steady background hiss well above the absolute floor.
       for (int i = 0; i < 200; i++) {
@@ -136,8 +144,9 @@ void main() {
     });
 
     test('reset clears all state', () {
-      final VoiceActivityDetector vad =
-          VoiceActivityDetector(source: AudioSource.mic);
+      final VoiceActivityDetector vad = VoiceActivityDetector(
+        source: AudioSource.mic,
+      );
       vad.process(frame(loud));
       vad.process(frame(loud));
       expect(vad.isSpeaking, isTrue);

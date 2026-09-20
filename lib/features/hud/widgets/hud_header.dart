@@ -105,6 +105,7 @@ class HudHeader extends ConsumerWidget {
               onTap: hud.toggleClickThrough,
             ),
             const _OpacityControl(),
+            _NotesButton(count: hud.notes.length, active: hud.isNotesOpen),
             XpIconButton(
               icon: Icons.tune_rounded,
               tooltip: 'Settings',
@@ -255,6 +256,51 @@ class _OpacityControlState extends ConsumerState<_OpacityControl> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Notes toggle with a live count of what has been asked.
+class _NotesButton extends ConsumerWidget {
+  const _NotesButton({required this.count, required this.active});
+
+  final int count;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        XpIconButton(
+          icon: Icons.notes_rounded,
+          tooltip: 'Questions asked so far',
+          active: active,
+          onTap: ref.read(hudControllerProvider).toggleNotes,
+        ),
+        if (count > 0)
+          Positioned(
+            right: 1,
+            top: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+              decoration: BoxDecoration(
+                color: XpColors.accent,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              constraints: const BoxConstraints(minWidth: 11),
+              child: Text(
+                count > 99 ? '99+' : '$count',
+                textAlign: TextAlign.center,
+                style: XpType.metric.copyWith(
+                  fontSize: 7.5,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

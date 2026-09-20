@@ -150,6 +150,16 @@ class ModelsTab extends ConsumerWidget {
                     update((XpSettings s) => s.copyWith(autoAnswer: v)),
               ),
             ),
+            SettingsRow(
+              label: 'Capture the screen when asked about it',
+              hint: '"What is wrong with this function?" grabs a frame first',
+              controlWidth: 60,
+              child: XpSwitch(
+                value: config.autoScreenSolve,
+                onChanged: (bool v) =>
+                    update((XpSettings s) => s.copyWith(autoScreenSolve: v)),
+              ),
+            ),
           ],
         ),
 
