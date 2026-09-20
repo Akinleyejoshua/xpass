@@ -107,7 +107,10 @@ class HudHeader extends ConsumerWidget {
               onTap: hud.toggleClickThrough,
             ),
             const _OpacityControl(),
-            _NotesButton(count: hud.notes.length, active: hud.isNotesOpen),
+            _NotesButton(
+              count: hud.conversation.entries.length,
+              active: hud.isNotesOpen,
+            ),
             XpIconButton(
               icon: Icons.tune_rounded,
               tooltip: 'Settings',
@@ -276,8 +279,8 @@ class _NotesButton extends ConsumerWidget {
       clipBehavior: Clip.none,
       children: <Widget>[
         XpIconButton(
-          icon: Icons.notes_rounded,
-          tooltip: 'Questions asked so far',
+          icon: Icons.forum_outlined,
+          tooltip: 'Conversation',
           active: active,
           onTap: ref.read(hudControllerProvider).toggleNotes,
         ),

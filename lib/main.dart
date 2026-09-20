@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/colors.dart';
 import 'core/constants/typography.dart';
 import 'core/providers.dart';
+import 'core/services/conversation_store.dart';
 import 'core/services/profile_service.dart';
 import 'core/services/settings_service.dart';
 import 'core/services/window_service.dart';
@@ -16,6 +17,7 @@ Future<void> main() async {
   // never flashes an unconfigured state on screen.
   final SettingsController settings = await SettingsController.load();
   final ProfileService profile = await ProfileService.load();
+  final ConversationStore conversation = await ConversationStore.open();
 
   const WindowService window = WindowService();
   await window.setSize(_hudWidth, _hudHeight);
@@ -28,6 +30,7 @@ Future<void> main() async {
       overrides: <Override>[
         settingsControllerProvider.overrideWithValue(settings),
         profileServiceProvider.overrideWithValue(profile),
+        conversationStoreProvider.overrideWithValue(conversation),
       ],
       child: const XpassApp(),
     ),

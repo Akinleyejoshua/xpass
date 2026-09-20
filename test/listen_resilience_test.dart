@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xpass/core/models/assist_models.dart';
 import 'package:xpass/core/services/audio_capture_service.dart';
 import 'package:xpass/core/services/gemini_service.dart';
+import 'package:xpass/core/services/conversation_store.dart';
 import 'package:xpass/core/services/native_speech_service.dart';
 import 'package:xpass/core/services/nvidia_nim_service.dart';
 import 'package:xpass/core/services/platform_channels.dart';
@@ -91,6 +92,7 @@ void mockChannels({required bool speechAuthorized}) {
 
 Future<HudController> buildController() async {
   final SettingsController settings = await SettingsController.load();
+  final ConversationStore conversation = await ConversationStore.open();
   return HudController(
     settings: settings,
     window: const WindowService(),
@@ -102,6 +104,7 @@ Future<HudController> buildController() async {
     profile: ProfileService.inMemory(const UserProfile()),
     portfolio: PortfolioImporter(),
     speech: NativeSpeechService(),
+    conversation: conversation,
   );
 }
 
@@ -117,6 +120,9 @@ void main() {
     mockChannels(speechAuthorized: false);
 
     final HudController hud = await buildController();
+    // Mic capture is off by default; this test is about audio surviving a
+    // transcription failure, so turn both sources on explicitly.
+    await hud.settings.update(hud.settings.value.copyWith(micEnabled: true));
     await hud.startListening();
 
     expect(hud.isListening, isTrue, reason: 'audio must keep running');
@@ -168,6 +174,7 @@ void main() {
     mockChannels(speechAuthorized: true);
 
     final HudController hud = await buildController();
+    await hud.settings.update(hud.settings.value.copyWith(micEnabled: true));
     await hud.startListening();
     await hud.stopListening();
 

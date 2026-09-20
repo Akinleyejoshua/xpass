@@ -51,6 +51,41 @@ void main() {
       );
     });
 
+    test('stops capturing the microphone on an existing install', () async {
+      // v1 and v2 captured the mic by default. Only system audio is worth
+      // transcribing, so an upgrade should stop.
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'micEnabled': true,
+        'settingsVersion': 2,
+      });
+
+      final SettingsController controller = await SettingsController.load();
+      expect(controller.value.micEnabled, isFalse);
+    });
+
+    test(
+      'keeps the microphone for anyone who asked to transcribe it',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'micEnabled': true,
+          'transcribeMic': true,
+          'settingsVersion': 2,
+        });
+
+        final SettingsController controller = await SettingsController.load();
+        expect(controller.value.micEnabled, isTrue);
+      },
+    );
+
+    test('a fresh install captures system audio only', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final SettingsController fresh = await SettingsController.load();
+
+      expect(fresh.value.systemAudioEnabled, isTrue);
+      expect(fresh.value.micEnabled, isFalse);
+      expect(fresh.value.transcribeMic, isFalse);
+    });
+
     test('a fresh install lands on-device', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
 

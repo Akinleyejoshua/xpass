@@ -523,6 +523,17 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
   private let micTap = MicrophoneTap()
   private var systemTapStorage: AnyObject?
 
+  /// Preferred system-audio path: a Core Audio process tap, gated on Audio
+  /// Capture rather than Screen Recording. Falls back to ScreenCaptureKit on
+  /// macOS 13, or if the tap cannot be created.
+  private var coreAudioTapStorage: AnyObject?
+
+  @available(macOS 14.2, *)
+  private var coreAudioTap: CoreAudioSystemTap? {
+    get { coreAudioTapStorage as? CoreAudioSystemTap }
+    set { coreAudioTapStorage = newValue }
+  }
+
   @available(macOS 13.0, *)
   private var systemTap: SystemAudioTap? {
     get { systemTapStorage as? SystemAudioTap }
@@ -602,8 +613,9 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
       // used SCK — including after the user has granted the permission. The
       // only trustworthy test is whether SCK will actually hand us content.
       if #available(macOS 13.0, *) {
+        let quiet = args["quiet"] as? Bool ?? false
         Task {
-          let probe = await MediaBridge.probeScreenAccess()
+          let probe = await MediaBridge.probeScreenAccess(quiet: quiet)
           await MainActor.run { result(probe.granted) }
         }
       } else {
@@ -633,9 +645,24 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
       }
 
     case "requestScreenPermission":
-      // Returns false the first time and shows the system prompt; the app must
-      // be relaunched once the user grants it.
-      result(CGRequestScreenCaptureAccess())
+      // This is the only call that actually prompts and registers the app in
+      // Privacy & Security. SCShareableContent just fails when denied, and a
+      // TCC reset removes the entry from the list altogether — so without
+      // this, an app can be impossible to grant from the UI at all.
+      //
+      // The prompt cannot be presented by an .accessory app, so promote for
+      // the duration, exactly as with speech and audio capture.
+      let previousPolicy = NSApp.activationPolicy()
+      if previousPolicy != .regular {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+      }
+      let granted = CGRequestScreenCaptureAccess()
+      if previousPolicy != .regular {
+        NSApp.setActivationPolicy(previousPolicy)
+      }
+      XpLog.write("screen: requested access -> \(granted)")
+      result(granted)
 
     case "hasMicPermission":
       result(AVCaptureDevice.authorizationStatus(for: .audio) == .authorized)
@@ -761,6 +788,9 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
     case "audioStatus":
       var status: [String: Any] = ["mic": micTap.isRunning, "system": false]
       if #available(macOS 13.0, *) { status["system"] = systemTap?.isRunning ?? false }
+      if #available(macOS 14.2, *), coreAudioTap?.isRunning == true {
+        status["system"] = true
+      }
       result(status)
 
     default:
@@ -774,20 +804,26 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
   /// This does not prompt — an ungranted app gets an error instead. Requesting
   /// is still CGRequestScreenCaptureAccess()'s job.
   @available(macOS 13.0, *)
-  static func probeScreenAccess() async -> (granted: Bool, error: String?, displays: Int) {
+  static func probeScreenAccess(
+    quiet: Bool = false
+  ) async -> (granted: Bool, error: String?, displays: Int) {
     do {
       let content = try await SCShareableContent.excludingDesktopWindows(
         false,
         onScreenWindowsOnly: true
       )
-      XpLog.write(
-        "screen: GRANTED (\(content.displays.count) displays, legacy=\(CGPreflightScreenCaptureAccess()))"
-      )
+      if !quiet {
+        XpLog.write(
+          "screen: GRANTED (\(content.displays.count) displays, legacy=\(CGPreflightScreenCaptureAccess()))"
+        )
+      }
       return (true, nil, content.displays.count)
     } catch {
-      XpLog.write(
-        "screen: DENIED \(error.localizedDescription) (legacy=\(CGPreflightScreenCaptureAccess()), ppid=\(getppid()))"
-      )
+      if !quiet {
+        XpLog.write(
+          "screen: DENIED \(error.localizedDescription) (legacy=\(CGPreflightScreenCaptureAccess()), ppid=\(getppid()))"
+        )
+      }
       return (false, error.localizedDescription, 0)
     }
   }
@@ -843,6 +879,43 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
       return
     }
 
+    // Prefer the Core Audio process tap: it hears the same audio but is gated
+    // on Audio Capture instead of Screen Recording, so listening to a call no
+    // longer requires the permission that also reads the screen.
+    if #available(macOS 14.2, *) {
+      let tap = coreAudioTap ?? CoreAudioSystemTap()
+      do {
+        tap.onSilentStream = { [weak self] in
+          self?.emitError(
+            source: "system",
+            message:
+              "System audio is being captured but every sample is silent, "
+              + "which is how macOS denies it. Enable xpass under System "
+              + "Settings › Privacy & Security › Screen & System Audio "
+              + "Recording, then relaunch."
+          )
+        }
+        try tap.start(
+          onFrame: { [weak self] pcm, rms in
+            self?.emit(source: "system", pcm: pcm, rms: rms)
+          },
+          onBuffer: { [weak self] buffer, rms in
+            self?.speech?.append(buffer: buffer, rms: rms, source: "system")
+          }
+        )
+        coreAudioTap = tap
+        started["system"] = true
+        started["systemPath"] = "coreaudio"
+        result(started)
+        return
+      } catch {
+        XpLog.write(
+          "coreaudio: tap unavailable (\(error.localizedDescription)); "
+            + "falling back to ScreenCaptureKit"
+        )
+      }
+    }
+
     // Snapshot the mic outcome so the concurrent closure below never captures
     // a mutable local.
     let micOutcome = started
@@ -868,6 +941,7 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
         self.systemTap = nil
         outcome["systemError"] = error.localizedDescription
       }
+      outcome["systemPath"] = "screencapturekit"
       let finalOutcome = outcome
       await MainActor.run { result(finalOutcome) }
     }
@@ -875,6 +949,10 @@ final class MediaBridge: NSObject, FlutterStreamHandler {
 
   private func stopAudio(result: @escaping FlutterResult) {
     micTap.stop()
+    if #available(macOS 14.2, *) {
+      coreAudioTap?.stop()
+      coreAudioTap = nil
+    }
     guard #available(macOS 13.0, *), let tap = systemTap else {
       result(true)
       return

@@ -65,7 +65,7 @@ class XpSettings {
     this.captureMode = CaptureMode.display,
     this.captureMaxWidth = 1600,
     this.captureQuality = 0.72,
-    this.micEnabled = true,
+    this.micEnabled = false,
     this.systemAudioEnabled = true,
     this.autoAnswer = true,
     this.autoScreenSolve = true,
@@ -154,6 +154,15 @@ class XpSettings {
   final CaptureMode captureMode;
   final int captureMaxWidth;
   final double captureQuality;
+
+  /// Capture the local microphone as well.
+  ///
+  /// Off by default, and that is the whole design: the only audio worth
+  /// transcribing is what the Mac is playing, because on a call that is the
+  /// other participants, already mixed and free of room echo. Capturing the
+  /// microphone adds nothing to answer with, doubles the transcription load,
+  /// and on speakers re-captures the other person so their words get
+  /// attributed to you. Turn it on only if you want a two-sided record.
   final bool micEnabled;
   final bool systemAudioEnabled;
 
@@ -298,7 +307,7 @@ class SettingsController extends ChangeNotifier {
       _env['GEMINI_API_KEY'] ?? _env['GOOGLE_API_KEY'] ?? '';
 
   /// Bumped whenever a stored value needs migrating. See [_migrate].
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
   static Future<SettingsController> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -378,6 +387,15 @@ class SettingsController extends ChangeNotifier {
           'transcriptionBackend',
           TranscriptionBackend.appleOnDevice.name,
         );
+      }
+    }
+
+    if (from < 3) {
+      // v1 and v2 captured the microphone by default. Only system audio is
+      // worth transcribing, so stop capturing it unless the user explicitly
+      // asked for their own side of the conversation.
+      if (prefs.getBool('transcribeMic') != true) {
+        await prefs.setBool('micEnabled', false);
       }
     }
 

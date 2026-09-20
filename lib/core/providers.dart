@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/hud/controllers/hud_controller.dart';
 import 'services/audio_capture_service.dart';
 import 'services/gemini_service.dart';
+import 'services/conversation_store.dart';
 import 'services/native_speech_service.dart';
 import 'services/nvidia_nim_service.dart';
 import 'services/portfolio_importer.dart';
@@ -24,6 +25,20 @@ final Provider<SettingsController> settingsControllerProvider =
 final ChangeNotifierProvider<SettingsController> settingsProvider =
     ChangeNotifierProvider<SettingsController>(
       (Ref ref) => ref.watch(settingsControllerProvider),
+    );
+
+/// Overridden in `main()` with the instance opened at launch.
+final Provider<ConversationStore> conversationStoreProvider =
+    Provider<ConversationStore>(
+      (Ref ref) => throw UnimplementedError(
+        'conversationStoreProvider must be overridden in ProviderScope',
+      ),
+    );
+
+/// Rebuilds the chat whenever a line is added or revised.
+final ChangeNotifierProvider<ConversationStore> conversationProvider =
+    ChangeNotifierProvider<ConversationStore>(
+      (Ref ref) => ref.watch(conversationStoreProvider),
     );
 
 /// Overridden in `main()` with the instance loaded from disk.
@@ -92,5 +107,6 @@ final ChangeNotifierProvider<HudController> hudControllerProvider =
         profile: ref.watch(profileServiceProvider),
         portfolio: ref.watch(portfolioImporterProvider),
         speech: ref.watch(nativeSpeechServiceProvider),
+        conversation: ref.watch(conversationStoreProvider),
       );
     });

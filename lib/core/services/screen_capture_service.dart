@@ -81,9 +81,14 @@ class ScreenCaptureService {
   const ScreenCaptureService();
 
   // -------------------------------------------------------------- permissions
-  Future<bool> hasPermission() async {
+  /// [quiet] suppresses the native log line, so a poll running every few
+  /// seconds does not bury everything else in the diagnostics file.
+  Future<bool> hasPermission({bool quiet = false}) async {
     try {
-      return await XpChannels.media.invokeMethod<bool>('hasScreenPermission') ??
+      return await XpChannels.media.invokeMethod<bool>(
+            'hasScreenPermission',
+            <String, Object?>{'quiet': quiet},
+          ) ??
           false;
     } on PlatformException {
       return false;

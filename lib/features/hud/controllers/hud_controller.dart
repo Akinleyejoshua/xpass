@@ -8,6 +8,7 @@ import '../../../core/models/assist_models.dart';
 import '../../../core/models/audio_models.dart';
 import '../../../core/models/hotkey_binding.dart';
 import '../../../core/services/audio_capture_service.dart';
+import '../../../core/services/conversation_store.dart';
 import '../../../core/services/gemini_service.dart';
 import '../../../core/services/native_speech_service.dart';
 import '../../../core/services/nvidia_nim_service.dart';
@@ -38,6 +39,7 @@ class HudController extends ChangeNotifier {
     required this.profile,
     required this.portfolio,
     required this.speech,
+    required this.conversation,
   });
 
   final SettingsController settings;
@@ -50,6 +52,9 @@ class HudController extends ChangeNotifier {
   final ProfileService profile;
   final PortfolioImporter portfolio;
   final NativeSpeechService speech;
+
+  /// The running chat: everything heard and everything answered, in order.
+  final ConversationStore conversation;
 
   // ----------------------------------------------------------------- state
   HudStatus _status = HudStatus.idle;
@@ -108,6 +113,21 @@ class HudController extends ChangeNotifier {
   String? _pipelineError;
   String? get pipelineError => _pipelineError;
 
+  /// When the other side was last heard speaking.
+  ///
+  /// On speakers rather than headphones their voice re-enters the microphone,
+  /// so the same sentence arrives on both sources. Without this it is
+  /// transcribed a second time and attributed to the user, which then poisons
+  /// the conversation context the model is answering from.
+  DateTime? _lastSystemSpeechAt;
+
+  /// How long after the other side speaks the microphone is assumed to be
+  /// hearing an echo rather than the user.
+  static const Duration _crossTalkWindow = Duration(milliseconds: 900);
+
+  int _suppressedEchoes = 0;
+  int get suppressedEchoes => _suppressedEchoes;
+
   double _micLevel = 0;
   double _systemLevel = 0;
   double get micLevel => _micLevel;
@@ -115,6 +135,8 @@ class HudController extends ChangeNotifier {
 
   bool _screenPermission = false;
   bool get hasScreenPermission => _screenPermission;
+
+  Timer? _permissionPoll;
 
   bool _speechReady = false;
   bool get speechReady => _speechReady;
@@ -171,6 +193,7 @@ class HudController extends ChangeNotifier {
 
     _screenPermission = await screen.hasPermission();
     _speechReady = (await speech.authorizationStatus()).isGranted;
+    _startPermissionPolling();
     await window.setOpacity(settings.value.opacity);
 
     _registerHotkeys();
@@ -185,6 +208,15 @@ class HudController extends ChangeNotifier {
     // from a shell the responsible process is the terminal, whose plist has no
     // such key — and macOS terminates xpass mid-request. So: ask when it is
     // safe to ask, and never otherwise.
+    // Denied at launch means either a genuine decline or — after a TCC reset —
+    // no entry at all, which cannot be fixed from System Settings because the
+    // app is not listed. Requesting registers it and prompts.
+    if (!_screenPermission && _launch.launchedByLaunchd) {
+      await screen.log('init: requesting screen access');
+      await screen.requestPermission();
+      _screenPermission = await screen.hasPermission();
+    }
+
     await screen.log(
       'init: backend=${settings.value.transcriptionBackend.name} '
       'launchd=${_launch.launchedByLaunchd} speechReady=$_speechReady '
@@ -241,6 +273,44 @@ class HudController extends ChangeNotifier {
       'Could not bind: $names. Rebind them in Settings.',
       isError: true,
     );
+  }
+
+  /// Re-probes Screen Recording until it is granted.
+  ///
+  /// The permission is read once at launch, which means enabling it in System
+  /// Settings while xpass is running could never be noticed — the app went on
+  /// insisting it was denied. Polling costs one cheap ScreenCaptureKit query
+  /// every few seconds and stops the moment it succeeds.
+  void _startPermissionPolling() {
+    _permissionPoll?.cancel();
+    if (_screenPermission) return;
+
+    _permissionPoll = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
+      if (_disposed) {
+        timer.cancel();
+        return;
+      }
+      unawaited(refreshScreenPermission());
+    });
+  }
+
+  /// Re-checks Screen Recording now. Safe to call from the UI.
+  Future<bool> refreshScreenPermission() async {
+    final bool granted = await screen.hasPermission(quiet: !_screenPermission);
+    if (granted == _screenPermission) return granted;
+
+    _screenPermission = granted;
+    if (granted) {
+      _permissionPoll?.cancel();
+      _permissionPoll = null;
+      await screen.log('screen: permission became available');
+      _setBanner(
+        'Screen Recording granted — screen solving is live.',
+        isError: false,
+      );
+    }
+    notifyListeners();
+    return granted;
   }
 
   void _onSettingsChanged() {
@@ -302,6 +372,15 @@ class HudController extends ChangeNotifier {
       );
       _setStatus(HudStatus.error);
       return;
+    }
+
+    if (config.systemAudioEnabled && !result.systemStarted) {
+      _pipelineError =
+          'System audio is not being captured, so xpass cannot hear the other '
+          'person — everything the microphone picks up is attributed to you, '
+          'and nothing will be answered automatically. Grant Screen Recording '
+          'under System Settings › Privacy & Security, then relaunch.';
+      _setBanner(_pipelineError!, isError: true);
     }
 
     if (result.systemError != null && config.systemAudioEnabled) {
@@ -466,6 +545,7 @@ class HudController extends ChangeNotifier {
     } else {
       _systemLevel = _decay(_systemLevel, frame.rms);
       _systemFrames++;
+      if (frame.rms > 0.012) _lastSystemSpeechAt = DateTime.now();
     }
 
     switch (event) {
@@ -491,6 +571,24 @@ class HudController extends ChangeNotifier {
 
   void _onTranscript(TranscriptEvent event) {
     if (_disposed) return;
+
+    // Drop the microphone's echo of the other side. Only meaningful when both
+    // sources are live; with system capture down there is nothing to compare
+    // against and the warning above covers it.
+    if (event.source == AudioSource.mic && _systemActive) {
+      final DateTime? lastSystem = _lastSystemSpeechAt;
+      if (lastSystem != null &&
+          DateTime.now().difference(lastSystem) < _crossTalkWindow) {
+        _suppressedEchoes++;
+        return;
+      }
+    }
+
+    conversation.recordSpeech(
+      source: event.source,
+      text: event.text,
+      isFinal: event.isFinal,
+    );
 
     if (!event.isFinal) {
       // Replace the trailing non-final line from the same source.
@@ -898,6 +996,14 @@ class HudController extends ChangeNotifier {
   }) {
     final String trimmed = text.trim();
     if (trimmed.isEmpty) return Future<void>.value();
+
+    // A typed question belongs in the record too, otherwise the chat has
+    // answers with nothing prompting them.
+    conversation.recordSpeech(
+      source: AudioSource.mic,
+      text: trimmed,
+      isFinal: true,
+    );
     if (withScreen) return captureAndSolve(question: trimmed);
     if (aboutMe) return askAboutMe(trimmed);
     return askFast(trimmed);
@@ -929,6 +1035,7 @@ class HudController extends ChangeNotifier {
     turn.wasHeard = heard;
     _answers++;
     _current = turn;
+    conversation.beginAnswer(turn);
     _pendingText.clear();
     _setStatus(HudStatus.thinking);
     return turn;
@@ -956,6 +1063,7 @@ class HudController extends ChangeNotifier {
       }
       turn.totalLatency = stopwatch.elapsed;
       turn.isDone = true;
+      conversation.completeAnswer(turn);
       if (!completer.isCompleted) completer.complete();
       if (_current == turn) {
         _setStatus(
@@ -1137,6 +1245,7 @@ class HudController extends ChangeNotifier {
 
     _micVad.reset();
     _systemVad.reset();
+    conversation.clear();
     _systemFrames = 0;
     _micFrames = 0;
     _segments = 0;
@@ -1218,6 +1327,7 @@ class HudController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     settings.removeListener(_onSettingsChanged);
+    _permissionPoll?.cancel();
     _bannerTimer?.cancel();
     _flushTimer?.cancel();
     _cancelActiveTurn();

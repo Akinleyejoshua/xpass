@@ -71,18 +71,26 @@ void main() {
       expect(build(TranscriptionBackend.rivaNim), isA<RivaNimTranscriber>());
     });
 
-    test('only transcribes the mic when asked', () {
-      final NativeSpeechTranscriber both =
-          build(
-                TranscriptionBackend.appleOnDevice,
-                settings: const XpSettings(transcribeMic: true),
-              )
-              as NativeSpeechTranscriber;
-      expect(both.sources, <AudioSource>[AudioSource.mic, AudioSource.system]);
-
+    test('listens to the other side only, by default', () {
+      // The whole point: on a call, system audio is the other participants,
+      // already mixed and without room echo. The microphone adds nothing to
+      // answer with, and on speakers it re-captures them as if they were you.
       final NativeSpeechTranscriber themOnly =
           build(TranscriptionBackend.appleOnDevice) as NativeSpeechTranscriber;
       expect(themOnly.sources, <AudioSource>[AudioSource.system]);
+    });
+
+    test('adds the microphone only when explicitly asked for both', () {
+      final NativeSpeechTranscriber both =
+          build(
+                TranscriptionBackend.appleOnDevice,
+                settings: const XpSettings(
+                  micEnabled: true,
+                  transcribeMic: true,
+                ),
+              )
+              as NativeSpeechTranscriber;
+      expect(both.sources, <AudioSource>[AudioSource.mic, AudioSource.system]);
     });
   });
 

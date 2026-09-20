@@ -10,11 +10,25 @@ import 'model_picker.dart';
 import 'settings_atoms.dart';
 
 /// Audio sources, transcription backend, screenshot quality, permissions.
-class CaptureTab extends ConsumerWidget {
+class CaptureTab extends ConsumerStatefulWidget {
   const CaptureTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CaptureTab> createState() => _CaptureTabState();
+}
+
+class _CaptureTabState extends ConsumerState<CaptureTab> {
+  @override
+  void initState() {
+    super.initState();
+    // Someone opening this tab has very likely just changed a permission.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(hudControllerProvider).refreshScreenPermission();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final SettingsController controller = ref.watch(settingsProvider);
     final HudController hud = ref.watch(hudControllerProvider);
     final XpSettings config = controller.value;
@@ -32,26 +46,31 @@ class CaptureTab extends ConsumerWidget {
 
         SettingsSection(
           title: 'AUDIO SOURCES',
-          subtitle: 'Restart listening after changing these.',
+          subtitle:
+              'System audio is what matters: on a call it is the other '
+              'participants, already mixed and without room echo. Restart '
+              'listening after changing these.',
           children: <Widget>[
             SettingsRow(
-              label: 'Microphone',
-              hint: 'What you say — used for context',
-              controlWidth: 60,
-              child: XpSwitch(
-                value: config.micEnabled,
-                onChanged: (bool v) =>
-                    update((XpSettings s) => s.copyWith(micEnabled: v)),
-              ),
-            ),
-            SettingsRow(
               label: 'System audio',
-              hint: 'What the interviewer says — needs Screen Recording',
+              hint: 'The other side of the call — this is the one that matters',
               controlWidth: 60,
               child: XpSwitch(
                 value: config.systemAudioEnabled,
                 onChanged: (bool v) =>
                     update((XpSettings s) => s.copyWith(systemAudioEnabled: v)),
+              ),
+            ),
+            SettingsRow(
+              label: 'Microphone',
+              hint:
+                  'Your own side. Not needed to answer — only for a '
+                  'two-sided record',
+              controlWidth: 60,
+              child: XpSwitch(
+                value: config.micEnabled,
+                onChanged: (bool v) =>
+                    update((XpSettings s) => s.copyWith(micEnabled: v)),
               ),
             ),
             SettingsRow(
@@ -242,7 +261,7 @@ class _PermissionCard extends ConsumerWidget {
               ),
               const SizedBox(width: 7),
               Text(
-                'Screen Recording permission required',
+                'Screen & System Audio Recording required',
                 style: XpType.body.copyWith(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -252,9 +271,13 @@ class _PermissionCard extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Both screen solving and system-audio capture need it. Enable xpass '
-            'under Privacy & Security › Screen Recording, then relaunch — macOS '
-            'only applies the grant on a fresh launch.',
+            'Open System Settings › Privacy & Security › Screen & System '
+            'Audio Recording and switch xpass on, then quit and reopen.\n\n'
+            'If xpass is not in that list, or the switch is already on and '
+            'nothing changes, the permission was declined at some point. macOS '
+            'never re-prompts after a decline and the record lives in a system '
+            'database no app can edit — the switch in that pane is the only '
+            'way back.',
             style: XpType.bodyMuted.copyWith(fontSize: 11.5),
           ),
           const SizedBox(height: 10),
@@ -263,8 +286,22 @@ class _PermissionCard extends ConsumerWidget {
               XpButton(
                 label: 'Request',
                 icon: Icons.lock_open_rounded,
+                onTap: () async {
+                  await ref
+                      .read(screenCaptureServiceProvider)
+                      .requestPermission();
+                  await ref
+                      .read(hudControllerProvider)
+                      .refreshScreenPermission();
+                },
+              ),
+              const SizedBox(width: 8),
+              XpButton(
+                label: 'Re-check',
+                icon: Icons.refresh_rounded,
+                tone: XpColors.panelRaised,
                 onTap: () =>
-                    ref.read(screenCaptureServiceProvider).requestPermission(),
+                    ref.read(hudControllerProvider).refreshScreenPermission(),
               ),
               const SizedBox(width: 8),
               XpButton(

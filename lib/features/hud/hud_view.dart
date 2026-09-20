@@ -11,7 +11,7 @@ import 'controllers/hud_controller.dart';
 import 'widgets/action_toolbar.dart';
 import 'widgets/hud_controls.dart';
 import 'widgets/hud_header.dart';
-import 'widgets/notes_panel.dart';
+import 'widgets/chat_panel.dart';
 import 'widgets/streaming_markdown.dart';
 import 'widgets/transcription_ticker.dart';
 
@@ -59,7 +59,7 @@ class _HudViewState extends ConsumerState<HudView> {
             Expanded(
               child: switch (hud.pane) {
                 HudPane.settings => const SettingsView(),
-                HudPane.notes => const NotesPanel(),
+                HudPane.notes => const ChatPanel(),
                 HudPane.answer => const _AnswerPane(),
               },
             ),

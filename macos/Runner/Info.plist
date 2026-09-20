@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>xpass uses Apple Events only to restore focus to the app you were working in.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>xpass listens to the audio this Mac is playing so it can transcribe the other side of a call. Nothing is recorded to disk.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>
