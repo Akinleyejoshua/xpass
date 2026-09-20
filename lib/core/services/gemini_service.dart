@@ -129,7 +129,7 @@ class GeminiService {
   Future<String> transcribe({
     required String apiKey,
     required Uint8List wav,
-    String model = 'gemini-2.0-flash',
+    String model = 'gemini-3.5-transcribe',
   }) async {
     if (apiKey.trim().isEmpty) {
       throw const AiServiceException(

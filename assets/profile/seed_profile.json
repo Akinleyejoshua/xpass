@@ -2,7 +2,7 @@
   "version": 1,
   "name": "Joshua Akinleye",
   "headline": "Full Stack Developer · AI/ML Engineering · Data Analytics",
-  "summary": "I’m Joshua , a multidisciplinary technologist passionate about transforming complexity into clarity. My journey bridges three worlds: Data Analytics & Science/Web — uncovering insights, building predictive models, and translating raw data into actionable strategies. AI/ML/DL Engineering — designing intelligent systems, training deep learning architectures, and pushing the boundaries of machine learning applications. Full Stack Development — crafting scalable, user-focused applications from front-end design to back-end infrastructure. What drives me is curiosity and impact. I thrive on solving problems that matter — whether it’s optimizing workflows, automating decisions, or creating digital products that empower people. Beyond the code, I value collaboration, continuous learning, and the art of connecting ideas across disciplines. My portfolio is a reflection of that mindset: a space where data meets design, and innovation meets execution. In short: I don’t just build solutions — I engineer possibilities.",
+  "summary": "I’m Joshua, a multidisciplinary technologist passionate about transforming complexity into clarity. My journey bridges three worlds: Data Analytics & Science/Web — uncovering insights, building predictive models, and translating raw data into actionable strategies. AI/ML/DL Engineering — designing intelligent systems, training deep learning architectures, and pushing the boundaries of machine learning applications. Full Stack Development — crafting scalable, user-focused applications from front-end design to back-end infrastructure. What drives me is curiosity and impact. I thrive on solving problems that matter — whether it’s optimizing workflows, automating decisions, or creating digital products that empower people. Beyond the code, I value collaboration, continuous learning, and the art of connecting ideas across disciplines. My portfolio is a reflection of that mindset: a space where data meets design, and innovation meets execution. In short: I don’t just build solutions — I engineer possibilities.",
   "location": "Available worldwide (remote)",
   "yearsExperience": "6+ years (since 2020)",
   "entries": [
@@ -423,7 +423,7 @@
       "kind": "project",
       "title": "BLOCKCHAIN DAPP (ETH-TRANFER)",
       "organization": "",
-      "summary": "54 views 23 Jul 2022\nA blockchain decentralized application review. \nTECHNOLOGIES USED:\n1. REMIX\n2. SOLIDITY\n3. ETHERS.JS\n4. REACTJS\n5. REACT-MORALIS\n6. MetaMask",
+      "summary": "54 views 23 Jul 2022\nA blockchain decentralized application review.\nTECHNOLOGIES USED:\n1. REMIX\n2. SOLIDITY\n3. ETHERS.JS\n4. REACTJS\n5. REACT-MORALIS\n6. MetaMask",
       "period": "",
       "bullets": [
         "Stack: Nextjs, MetaMask, ethers.js, Hardhart.js, Solidity, Remix",

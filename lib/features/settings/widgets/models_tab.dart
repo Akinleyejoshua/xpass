@@ -5,6 +5,7 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/typography.dart';
 import '../../../core/providers.dart';
 import '../../../core/services/settings_service.dart';
+import 'model_picker.dart';
 import 'settings_atoms.dart';
 
 /// API keys, model selection and answer style.
@@ -63,10 +64,13 @@ class ModelsTab extends ConsumerWidget {
             SettingsRow(
               label: 'Fast wingman',
               hint: 'Spoken questions, sub-second answers',
-              child: XpDropdown<String>(
+              controlWidth: 250,
+              child: ModelPicker(
+                provider: ModelProvider.nvidia,
                 value: config.nimModel,
-                items: XpSettings.nimModelChoices,
-                labelOf: (String m) => m,
+                apiKey: config.nvidiaApiKey,
+                fallback: XpSettings.nimModelChoices,
+                preferVision: false,
                 onChanged: (String v) =>
                     update((XpSettings s) => s.copyWith(nimModel: v)),
               ),
@@ -74,10 +78,13 @@ class ModelsTab extends ConsumerWidget {
             SettingsRow(
               label: 'Screen solver',
               hint: 'Multimodal reasoning over a screenshot',
-              child: XpDropdown<String>(
+              controlWidth: 250,
+              child: ModelPicker(
+                provider: ModelProvider.gemini,
                 value: config.geminiFastModel,
-                items: XpSettings.geminiModelChoices,
-                labelOf: (String m) => m,
+                apiKey: config.geminiApiKey,
+                fallback: XpSettings.geminiModelChoices,
+                preferVision: true,
                 onChanged: (String v) =>
                     update((XpSettings s) => s.copyWith(geminiFastModel: v)),
               ),
@@ -85,10 +92,13 @@ class ModelsTab extends ConsumerWidget {
             SettingsRow(
               label: 'Deep reasoning model',
               hint: 'Used when Deep mode is on',
-              child: XpDropdown<String>(
+              controlWidth: 250,
+              child: ModelPicker(
+                provider: ModelProvider.gemini,
                 value: config.geminiDeepModel,
-                items: XpSettings.geminiModelChoices,
-                labelOf: (String m) => m,
+                apiKey: config.geminiApiKey,
+                fallback: XpSettings.geminiModelChoices,
+                preferVision: true,
                 onChanged: (String v) =>
                     update((XpSettings s) => s.copyWith(geminiDeepModel: v)),
               ),

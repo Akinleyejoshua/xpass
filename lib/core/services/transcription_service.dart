@@ -280,7 +280,7 @@ class GeminiLiveTranscriber extends Transcriber {
   GeminiLiveTranscriber({
     required this.apiKey,
     required this.sources,
-    this.model = 'gemini-2.0-flash-live-001',
+    this.model = 'gemini-3.8-live',
   });
 
   final String apiKey;
@@ -534,9 +534,9 @@ Transcriber buildTranscriber({
       return GeminiBatchTranscriber(
         gemini: gemini,
         apiKey: settings.geminiApiKey,
-        // Transcription always uses the fast model; the deep model is reserved
-        // for reasoning and would add seconds for no accuracy gain here.
-        model: settings.geminiFastModel,
+        // A dedicated speech-to-text model, never the reasoning model — the
+        // deep tier would add seconds per utterance for no accuracy gain.
+        model: settings.geminiTranscribeModel,
       );
   }
 }

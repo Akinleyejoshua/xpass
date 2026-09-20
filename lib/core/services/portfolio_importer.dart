@@ -277,6 +277,9 @@ class PortfolioImporter {
     final Map<String, int> counts = <String, int>{};
     for (final Object? raw in projects) {
       if (raw is! Map<String, Object?>) continue;
+      // Hidden projects are excluded from the project list, so they must not
+      // inflate the skill ranking either.
+      if (raw['isVisible'] == false) continue;
       for (final Object? tech
           in raw['technologies'] as List<Object?>? ?? <Object?>[]) {
         if (tech is! String) continue;
@@ -349,10 +352,16 @@ class PortfolioImporter {
 
   /// Strips the rich-text HTML a CMS bio field carries.
   static String stripHtml(String html) {
+    // Block-level tags end a line; inline tags (<b>, <span>, <a>) are removed
+    // outright, because they do not create a word boundary — replacing them
+    // with a space yields "Joshua , a developer".
     String text = html
         .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
-        .replaceAll(RegExp(r'</(p|div|li|h[1-6])>', caseSensitive: false), '\n')
-        .replaceAll(RegExp(r'<[^>]+>'), ' ');
+        .replaceAll(
+          RegExp(r'</(p|div|li|h[1-6]|tr|blockquote)>', caseSensitive: false),
+          '\n',
+        )
+        .replaceAll(RegExp(r'<[^>]+>'), '');
 
     const Map<String, String> entities = <String, String>{
       '&nbsp;': ' ',
@@ -376,9 +385,12 @@ class PortfolioImporter {
       (Match m) => String.fromCharCode(int.parse(m.group(1)!)),
     );
 
+    // Normalise per line so a stripped block tag cannot leave the next line
+    // indented by the space its opening tag used to occupy.
     return text
-        .replaceAll(RegExp(r'[ \t]+'), ' ')
-        .replaceAll(RegExp(r'\n{2,}'), '\n')
-        .trim();
+        .split('\n')
+        .map((String line) => line.replaceAll(RegExp(r'[ \t]+'), ' ').trim())
+        .where((String line) => line.isNotEmpty)
+        .join('\n');
   }
 }

@@ -53,6 +53,7 @@ class XpSettings {
     this.nimModel = defaultNimModel,
     this.geminiFastModel = defaultGeminiFastModel,
     this.geminiDeepModel = defaultGeminiDeepModel,
+    this.geminiTranscribeModel = defaultGeminiTranscribeModel,
     this.useDeepReasoning = false,
     this.codeLanguage = 'Python',
     this.opacity = 0.96,
@@ -71,23 +72,46 @@ class XpSettings {
     this.hotkeys = MacKeyCodes.defaults,
   });
 
-  static const String defaultNimModel = 'meta/llama-3.3-70b-instruct';
-  static const String defaultGeminiFastModel = 'gemini-2.0-flash';
-  static const String defaultGeminiDeepModel = 'gemini-2.5-pro';
+  static const String defaultNimModel = 'nvidia/nemotron-3.5-lightning-30b-a3b';
+
+  // Offline fallbacks only — the pickers fetch the live catalogue from each
+  // provider. Kept current because a stale default is a dead request: the
+  // gemini-2.0 line has already been shut down, and the 2.5 line is on its way
+  // out.
+  static const String defaultGeminiFastModel = 'gemini-3.5-flash';
+  static const String defaultGeminiDeepModel = 'gemini-3.1-pro-preview';
+  static const String defaultGeminiTranscribeModel = 'gemini-3.5-transcribe';
   static const String defaultPortfolioUrl = 'https://joshuapro.netlify.app';
 
+  /// Offline fallback only. The picker lists the provider's live catalogue,
+  /// which is the single source of truth — model ids are retired regularly.
   static const List<String> nimModelChoices = <String>[
-    'meta/llama-3.3-70b-instruct',
-    'deepseek-ai/deepseek-v3',
-    'meta/llama-3.1-405b-instruct',
-    'qwen/qwen2.5-coder-32b-instruct',
+    'nvidia/nemotron-3.5-lightning-30b-a3b',
+    'nvidia/nemotron-nano-3-30b-a3b',
+    'deepseek-ai/deepseek-v4-flash-0731',
+    'z-ai/glm-5.3-flash',
+    'z-ai/glm-5.3',
+    'moonshotai/kimi-k3',
+    'nvidia/nemotron-3-super-120b-a12b',
+    'google/gemma-4-31b-it',
     'mistralai/mistral-large-2-instruct',
   ];
 
   static const List<String> geminiModelChoices = <String>[
-    'gemini-2.0-flash',
+    'gemini-3.8-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-pro-preview',
     'gemini-2.5-flash',
     'gemini-2.5-pro',
+  ];
+
+  /// Speech-to-text models. Purpose-built ASR beats a general model on both
+  /// latency and word error rate.
+  static const List<String> geminiTranscribeChoices = <String>[
+    'gemini-3.5-transcribe',
+    'gemini-3.5-flash',
+    'gemini-3.8-flash',
   ];
 
   static const List<String> languageChoices = <String>[
@@ -110,6 +134,9 @@ class XpSettings {
   final String nimModel;
   final String geminiFastModel;
   final String geminiDeepModel;
+
+  /// Model used for speech-to-text on the batch transcription path.
+  final String geminiTranscribeModel;
 
   /// Route deep solves to [geminiDeepModel] instead of [geminiFastModel].
   final bool useDeepReasoning;
@@ -150,6 +177,7 @@ class XpSettings {
     String? nimModel,
     String? geminiFastModel,
     String? geminiDeepModel,
+    String? geminiTranscribeModel,
     bool? useDeepReasoning,
     String? codeLanguage,
     double? opacity,
@@ -173,6 +201,8 @@ class XpSettings {
       nimModel: nimModel ?? this.nimModel,
       geminiFastModel: geminiFastModel ?? this.geminiFastModel,
       geminiDeepModel: geminiDeepModel ?? this.geminiDeepModel,
+      geminiTranscribeModel:
+          geminiTranscribeModel ?? this.geminiTranscribeModel,
       useDeepReasoning: useDeepReasoning ?? this.useDeepReasoning,
       codeLanguage: codeLanguage ?? this.codeLanguage,
       opacity: opacity ?? this.opacity,
@@ -295,6 +325,7 @@ class SettingsController extends ChangeNotifier {
       _prefs.setString('nimModel', next.nimModel),
       _prefs.setString('geminiFastModel', next.geminiFastModel),
       _prefs.setString('geminiDeepModel', next.geminiDeepModel),
+      _prefs.setString('geminiTranscribeModel', next.geminiTranscribeModel),
       _prefs.setBool('useDeepReasoning', next.useDeepReasoning),
       _prefs.setString('codeLanguage', next.codeLanguage),
       _prefs.setDouble('opacity', next.opacity),
