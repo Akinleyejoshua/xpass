@@ -4,6 +4,19 @@
 /// at a HUD for under a second at a time. Every instruction here exists to keep
 /// the first line of output immediately speakable.
 abstract final class XpPrompts {
+  /// Prepended to every system prompt on the NVIDIA tier.
+  ///
+  /// `detailed thinking off` is the switch the Nemotron family reads; the rest
+  /// is belt and braces for everything else. Models that do not recognise it
+  /// simply read it as an instruction, which says the same thing.
+  static const String noThinking = '''
+detailed thinking off
+
+Output the answer only. Never show your reasoning, never restate the question,
+never describe what you are about to do, never number your steps, and never
+begin with "Here's", "Let me", "Okay", "First" or "The user".
+''';
+
   // ------------------------------------------------------------------ tier 1
   /// NVIDIA NIM — conceptual questions asked out loud.
   static const String fastWingman = '''

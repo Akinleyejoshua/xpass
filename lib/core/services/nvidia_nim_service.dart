@@ -55,6 +55,7 @@ class NvidiaNimService {
     double temperature = 0.2,
     double topP = 0.9,
     int maxTokens = 420,
+    bool disableThinking = true,
   }) async* {
     if (apiKey.trim().isEmpty) {
       throw const AiServiceException(
@@ -78,6 +79,14 @@ class NvidiaNimService {
           'top_p': topP,
           'max_tokens': maxTokens,
           'stream': true,
+          // Hybrid reasoning models default to thinking out loud, which both
+          // leaks a monologue into the HUD and burns the token budget before
+          // the answer is written. Models that do not understand these keys
+          // ignore them.
+          if (disableThinking) ...<String, Object?>{
+            'chat_template_kwargs': <String, Object?>{'thinking': false},
+            'reasoning_effort': 'none',
+          },
         });
 
       final http.StreamedResponse response = await client

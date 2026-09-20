@@ -172,7 +172,28 @@ silently changes it.
 
 ---
 
-## 6. Rate limits
+## 6. If the answer looks like a monologue
+
+Hybrid reasoning models think out loud, and some spend the whole token budget
+doing it before writing anything useful. xpass defends against this three ways:
+
+- every NVIDIA request sends `chat_template_kwargs: {thinking: false}` and
+  `reasoning_effort: none`, and the system prompt opens with `detailed thinking
+  off` — the switch the Nemotron family reads;
+- each tier is given one worked example of the answer shape, which suppresses
+  preamble far more reliably than instructions alone;
+- the stream is filtered before it reaches the HUD: `<think>` blocks are
+  stripped, and an untagged opener ("Here's a thinking process:", "Let me think
+  through…", "The user is asking…") is discarded. Time-to-first-token is
+  measured from the first *useful* token, so the metric is not flattered by
+  reasoning the user never saw.
+
+If a response is nothing but reasoning, the panel says so and names the fix
+rather than sitting blank. **Switch to a non-reasoning model** under Settings ›
+Models — anything with `-instruct` or `-it` in the id is a safe bet; avoid ids
+containing `reasoning` or `thinking`.
+
+## 7. Rate limits
 
 Each thing the other person says is one transcription request, so a fast
 exchange can outrun a free-tier quota. xpass paces requests evenly (a leaky
@@ -189,7 +210,7 @@ If you still hit the limit:
 
 ---
 
-## 7. What "invisible" means
+## 8. What "invisible" means
 
 `MainFlutterWindow` sets `NSWindowSharingNone`, so the macOS compositor never
 hands the surface to a capturing client. The window is absent from the frames
@@ -203,7 +224,7 @@ that inspects running processes, or anyone watching your eyes.
 
 ---
 
-## 8. Layout
+## 9. Layout
 
 ```
 macos/Runner/
@@ -229,16 +250,17 @@ Platform channels: `com.xpass.app/window`, `/media`, `/audio`, `/hotkeys`.
 
 ---
 
-## 9. Tests
+## 10. Tests
 
 ```bash
 flutter test
 ```
 
-114 tests covering the SSE parser, the VAD state machine and its noise
+128 tests covering the SSE parser, the VAD state machine and its noise
 estimator, WAV framing, profile retrieval and résumé parsing, both model
 services against mocked HTTP, the model catalogue, the portfolio importer, the
-rate limiter, question routing across the three tiers, and answer extraction.
+rate limiter, question routing across the three tiers, the reasoning
+filter, and answer extraction.
 
 There is no widget-level test: mounting the full HUD tree crashes the test
 harness, and a red suite is worse than an honest gap.

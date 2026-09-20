@@ -17,6 +17,7 @@ import '../../../core/services/settings_service.dart';
 import '../../../core/services/transcription_service.dart';
 import '../../../core/services/window_service.dart';
 import '../../../core/shortcuts/hotkey_service.dart';
+import '../../../core/utils/reasoning_filter.dart';
 import '../../../core/utils/vad.dart';
 
 /// Orchestrates everything the HUD does: capture, transcribe, decide, stream.
@@ -552,7 +553,19 @@ class HudController extends ChangeNotifier {
         apiKey: config.nvidiaApiKey,
         model: config.nimModel,
         messages: <ChatMessage>[
-          ChatMessage.system(persona),
+          ChatMessage.system('${XpPrompts.noThinking}\n$persona'),
+          // One worked exchange. A single example of the expected shape
+          // suppresses preamble far more reliably than any amount of
+          // instruction prose.
+          const ChatMessage.user(
+            'They just asked: "How would you keep a '
+            'read-heavy API fast?"\n\nGive me my talking points.',
+          ),
+          const ChatMessage.assistant(
+            '- Cache at the edge first — most read traffic never needs the origin.\n'
+            '- Add a read replica before sharding; sharding is a one-way door.\n'
+            '- Watch p99, not mean — the mean hides the queue.',
+          ),
           ChatMessage.user(
             XpPrompts.fastUserTurn(
               question: question,
@@ -601,7 +614,22 @@ class HudController extends ChangeNotifier {
         apiKey: config.nvidiaApiKey,
         model: config.nimModel,
         messages: <ChatMessage>[
-          ChatMessage.system(XpPrompts.profileWingman(context)),
+          ChatMessage.system(
+            '${XpPrompts.noThinking}\n${XpPrompts.profileWingman(context)}',
+          ),
+          // A worked STAR answer, including the case the facts do not cover —
+          // which is exactly where the model is most tempted to think aloud.
+          const ChatMessage.user(
+            'They just asked: "Tell me about a time you '
+            'led a migration"\n\nGive me my answer, in my voice.',
+          ),
+          const ChatMessage.assistant(
+            'The closest I have is the backend rebuild at BLNR — not a '
+            'migration, but the same shape of problem. I owned the API '
+            'architecture end to end and moved the team onto it incrementally '
+            'rather than in one cutover. We shipped without downtime, and I '
+            'would run a real migration the same way.',
+          ),
           ChatMessage.user(
             XpPrompts.profileUserTurn(
               question: question,
@@ -609,8 +637,8 @@ class HudController extends ChangeNotifier {
             ),
           ),
         ],
-        // Profile answers need room for a full STAR story, and a little more
-        // variation than a factual lookup so they do not sound recited.
+        // Room for a full STAR story, and a little more variation than a
+        // factual lookup so it does not sound recited.
         maxTokens: 520,
         temperature: 0.35,
       ),
@@ -746,12 +774,22 @@ class HudController extends ChangeNotifier {
     final Completer<void> completer = Completer<void>();
     _turnCompleter = completer;
     final Stopwatch stopwatch = Stopwatch()..start();
+    final ReasoningFilter filter = ReasoningFilter();
 
     void finish() {
       _flushTimer?.cancel();
       _flushTimer = null;
+      _pendingText.write(filter.flush());
       _flushPending(turn);
       stopwatch.stop();
+
+      // A response that was nothing but chain-of-thought leaves an empty
+      // panel, which looks like a bug. Say what actually happened.
+      if (filter.suppressedEverything && !turn.hasContent) {
+        turn.error =
+            'The model replied with its own reasoning instead of an '
+            'answer. Pick a non-reasoning model under Settings › Models.';
+      }
       turn.totalLatency = stopwatch.elapsed;
       turn.isDone = true;
       if (!completer.isCompleted) completer.complete();
@@ -767,11 +805,16 @@ class HudController extends ChangeNotifier {
 
     _deltaSub = deltas.listen(
       (String delta) {
+        final String visible = filter.add(delta);
+        if (visible.isEmpty) return;
+
+        // Time to first *useful* token — a monologue the user never sees is
+        // not a response, and counting it would flatter the metric.
         if (turn.firstTokenLatency == null) {
           turn.firstTokenLatency = stopwatch.elapsed;
           _setStatus(HudStatus.streaming);
         }
-        _pendingText.write(delta);
+        _pendingText.write(visible);
         _scheduleFlush(turn);
       },
       onError: (Object error) {
