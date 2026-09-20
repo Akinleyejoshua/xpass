@@ -6,6 +6,7 @@ import '../../../core/constants/typography.dart';
 import '../../../core/providers.dart';
 import '../../../core/services/settings_service.dart';
 import '../../hud/controllers/hud_controller.dart';
+import 'model_picker.dart';
 import 'settings_atoms.dart';
 
 /// Audio sources, transcription backend, screenshot quality, permissions.
@@ -83,6 +84,21 @@ class CaptureTab extends ConsumerWidget {
                 ),
               ),
             ),
+            if (config.transcriptionBackend == TranscriptionBackend.geminiBatch)
+              SettingsRow(
+                label: 'Speech-to-text model',
+                hint: 'A dedicated ASR model beats a general one on latency',
+                controlWidth: 250,
+                child: ModelPicker(
+                  provider: ModelProvider.gemini,
+                  value: config.geminiTranscribeModel,
+                  apiKey: config.geminiApiKey,
+                  fallback: XpSettings.geminiTranscribeChoices,
+                  onChanged: (String v) => update(
+                    (XpSettings s) => s.copyWith(geminiTranscribeModel: v),
+                  ),
+                ),
+              ),
             if (config.transcriptionBackend == TranscriptionBackend.rivaNim)
               SettingsStack(
                 label: 'Riva NIM base URL',

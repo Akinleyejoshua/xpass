@@ -176,21 +176,17 @@ class ModelCatalogService {
   // -------------------------------------------------------------------- NIM
 
   /// Lists the models the NVIDIA NIM gateway is serving.
-  Future<List<ModelInfo>> fetchNimModels({required String apiKey}) async {
-    if (apiKey.trim().isEmpty) {
-      throw const AiServiceException(
-        'Add an NVIDIA API key to load the model list.',
-        provider: 'NVIDIA NIM',
-      );
-    }
-
+  /// The NIM catalogue is served without authentication, so the picker is
+  /// populated even before the user has pasted a key.
+  Future<List<ModelInfo>> fetchNimModels({String apiKey = ''}) async {
     final http.Client client = _clientFactory();
     try {
       final http.Response response = await client
           .get(
             Uri.parse(nimEndpoint),
             headers: <String, String>{
-              'Authorization': 'Bearer ${apiKey.trim()}',
+              if (apiKey.trim().isNotEmpty)
+                'Authorization': 'Bearer ${apiKey.trim()}',
             },
           )
           .timeout(_timeout);
