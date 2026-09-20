@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import '../models/audio_models.dart';
@@ -10,6 +11,7 @@ class VadConfig {
     this.framesToOpen = 2,
     this.framesToClose = 6,
     this.prerollFrames = 3,
+    this.noiseWindowFrames = 300,
     this.minSegment = const Duration(milliseconds: 320),
     this.maxSegment = const Duration(seconds: 22),
   });
@@ -29,6 +31,10 @@ class VadConfig {
 
   /// Frames retained before the gate opens, so the first syllable is not clipped.
   final int prerollFrames;
+
+  /// Frames of history the noise floor is estimated over (~30 s at 100 ms
+  /// frames). Long enough to span a monologue, short enough to follow a room.
+  final int noiseWindowFrames;
 
   /// Drop anything shorter than this — keyboard clicks, chair creaks.
   final Duration minSegment;
@@ -73,6 +79,10 @@ class VoiceActivityDetector {
   final List<Uint8List> _preroll = <Uint8List>[];
   final BytesBuilder _active = BytesBuilder(copy: false);
 
+  /// Rolling history of frame loudness, used for minimum-statistics noise
+  /// estimation.
+  final List<double> _levelWindow = <double>[];
+
   double _noiseFloor = 0.004;
   int _loudRun = 0;
   int _quietRun = 0;
@@ -84,17 +94,17 @@ class VoiceActivityDetector {
 
   /// Current gate threshold, exposed so the UI can draw a meaningful meter.
   double get threshold =>
-      (_noiseFloor * config.noiseMultiplier).clamp(config.absoluteFloor, 1.0);
+      math.max(_noiseFloor * config.noiseMultiplier, config.absoluteFloor);
 
   /// Feed one frame; returns an event when the speech state changes.
   VadEvent? process(AudioFrame frame) {
     _sampleRate = frame.sampleRate;
+    // Decide against the floor as it stood *before* this frame, so the first
+    // word of an utterance cannot raise the bar against itself.
     final bool loud = frame.rms > threshold;
+    _updateNoiseFloor(frame.rms);
 
     if (!_open) {
-      // Track the room tone only while nobody is talking.
-      _noiseFloor = _noiseFloor * 0.95 + frame.rms * 0.05;
-
       _preroll.add(frame.pcm);
       if (_preroll.length > config.prerollFrames) _preroll.removeAt(0);
 
@@ -157,9 +167,40 @@ class VoiceActivityDetector {
     );
   }
 
+  /// Estimates room tone as the quietest frame in the recent past.
+  ///
+  /// Deliberately independent of the gate. An earlier version only learned
+  /// while the gate was closed, which meant a steady noise source above the
+  /// threshold — a fan, a noisy line, background music — latched the gate open
+  /// and the floor never caught up. Taking the minimum over a rolling window
+  /// works in both cases: continuous speech still contains brief low-energy
+  /// frames between words, while a quiet room with a hiss has a minimum equal
+  /// to the hiss itself.
+  void _updateNoiseFloor(double rms) {
+    _levelWindow.add(rms);
+    if (_levelWindow.length > config.noiseWindowFrames) {
+      _levelWindow.removeAt(0);
+    }
+
+    double minimum = double.infinity;
+    for (final double level in _levelWindow) {
+      if (level < minimum) minimum = level;
+    }
+    if (!minimum.isFinite) return;
+
+    // Asymmetric easing. A drop in the minimum means the room really is that
+    // quiet, so trust it quickly. A rise means either genuine new noise or a
+    // long stretch of speech, so adopt it slowly — that way a monologue cannot
+    // deafen the detector before the speaker finishes.
+    _noiseFloor = minimum < _noiseFloor
+        ? _noiseFloor * 0.6 + minimum * 0.4
+        : _noiseFloor * 0.98 + minimum * 0.02;
+  }
+
   void reset() {
     _preroll.clear();
     _active.clear();
+    _levelWindow.clear();
     _open = false;
     _openedAt = null;
     _loudRun = 0;

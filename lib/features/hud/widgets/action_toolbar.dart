@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/typography.dart';
-import '../../../core/models/assist_models.dart';
 import '../../../core/providers.dart';
 import '../../../core/services/window_service.dart';
 import '../controllers/hud_controller.dart';

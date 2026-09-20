@@ -599,10 +599,16 @@ class HudController extends ChangeNotifier {
 
   /// Typed question from the ask box. Routes by intent: anything that needs the
   /// screen goes to Gemini, anything conversational goes to NIM.
-  Future<void> ask(String text, {bool withScreen = false}) {
+  Future<void> ask(
+    String text, {
+    bool withScreen = false,
+    bool aboutMe = false,
+  }) {
     final String trimmed = text.trim();
     if (trimmed.isEmpty) return Future<void>.value();
-    return withScreen ? captureAndSolve(question: trimmed) : askFast(trimmed);
+    if (withScreen) return captureAndSolve(question: trimmed);
+    if (aboutMe) return askAboutMe(trimmed);
+    return askFast(trimmed);
   }
 
   // -------------------------------------------------------------- turn plumbing

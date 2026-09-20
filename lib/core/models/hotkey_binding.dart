@@ -186,6 +186,62 @@ abstract final class MacKeyCodes {
 
   static String nameFor(int keyCode) => _names[keyCode] ?? 'key$keyCode';
 
+  /// Flutter logical key id -> Carbon virtual key code, for the rebinding UI.
+  ///
+  /// Carbon addresses physical key positions while Flutter reports logical
+  /// (layout-mapped) keys, so this table assumes the standard ANSI layout. On a
+  /// non-ANSI layout the shortcut still fires — it fires on the key that sits
+  /// where that letter would be on ANSI.
+  ///
+  /// Ids verified against LogicalKeyboardKey.keyId, not guessed.
+  static const Map<int, int> _logicalToVirtual = <int, int>{
+    0x00000000061: keyA,
+    0x00000000062: keyB,
+    0x00000000063: keyC,
+    0x00000000064: keyD,
+    0x00000000065: keyE,
+    0x00000000066: keyF,
+    0x00000000067: keyG,
+    0x00000000068: keyH,
+    0x00000000069: keyI,
+    0x0000000006a: keyJ,
+    0x0000000006b: keyK,
+    0x0000000006c: keyL,
+    0x0000000006d: keyM,
+    0x0000000006e: keyN,
+    0x0000000006f: keyO,
+    0x00000000070: keyP,
+    0x00000000071: keyQ,
+    0x00000000072: keyR,
+    0x00000000073: keyS,
+    0x00000000074: keyT,
+    0x00000000075: keyU,
+    0x00000000076: keyV,
+    0x00000000077: keyW,
+    0x00000000078: keyX,
+    0x00000000079: keyY,
+    0x0000000007a: keyZ,
+    0x00100000008: keyBackspace,
+    0x0010000000d: keyReturn,
+    0x00000000020: keySpace,
+    0x00100000009: keyTab,
+    0x0010000001b: keyEscape,
+    0x00100000304: keyUp,
+    0x00100000301: keyDown,
+    0x00100000302: keyLeft,
+    0x00100000303: keyRight,
+    0x00100000801: keyF1,
+    0x00100000802: keyF2,
+    0x00100000803: keyF3,
+    0x00100000804: keyF4,
+    0x00100000805: keyF5,
+    0x00100000806: keyF6,
+  };
+
+  /// Returns null for keys xpass cannot bind (a bare modifier, an unmapped key).
+  static int? fromLogicalKeyId(int logicalKeyId) =>
+      _logicalToVirtual[logicalKeyId];
+
   /// The shortcuts from the spec.
   static const Map<HotkeyAction, HotkeyBinding> defaults =
       <HotkeyAction, HotkeyBinding>{

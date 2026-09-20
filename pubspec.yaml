@@ -30,9 +30,10 @@ dependencies:
   # State management.
   flutter_riverpod: ^2.6.1
 
-  # HUD dragging, sizing, positioning.
-  window_manager: ^0.5.2
-  screen_retriever: ^0.2.2
+  # NOTE: HUD dragging, sizing and display enumeration are handled by the
+  # native bridge rather than window_manager / screen_retriever — those
+  # packages reconfigure styleMask and window level on startup, which undoes
+  # the stealth configuration in MainFlutterWindow.swift.
 
   # Local persistence for API keys / prompt templates / preferences.
   shared_preferences: ^2.5.5
