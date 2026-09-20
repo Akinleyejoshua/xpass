@@ -93,19 +93,21 @@ void main() {
         config: const VadConfig(
           framesToOpen: 1,
           prerollFrames: 0,
-          maxSegment: Duration(milliseconds: 300),
+          // Must stay above minSegment, or the forced segment is correctly
+          // discarded as too short to be speech.
+          maxSegment: Duration(milliseconds: 400),
         ),
       );
 
       VadEvent? event;
-      for (int i = 0; i < 6 && event is! VadSpeechEnd; i++) {
+      for (int i = 0; i < 10 && event is! VadSpeechEnd; i++) {
         event = vad.process(frame(loud)) ?? event;
       }
 
       expect(event, isA<VadSpeechEnd>(), reason: 'must not stall the pipeline');
       expect(
         (event! as VadSpeechEnd).segment.duration,
-        greaterThanOrEqualTo(const Duration(milliseconds: 300)),
+        greaterThanOrEqualTo(const Duration(milliseconds: 400)),
       );
     });
 

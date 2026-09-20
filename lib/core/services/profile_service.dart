@@ -46,6 +46,19 @@ class ProfileService extends ChangeNotifier {
     _setProfile(profile);
   }
 
+  /// A service backed by a scratch file, for tests and previews.
+  ///
+  /// Retrieval and classification are pure functions of the profile, so this
+  /// exercises them without touching the user's real Application Support data.
+  @visibleForTesting
+  factory ProfileService.inMemory(UserProfile profile) => ProfileService._(
+    File(
+      '${Directory.systemTemp.path}/xpass-profile-'
+      '${DateTime.now().microsecondsSinceEpoch}.json',
+    ),
+    profile,
+  );
+
   final File _file;
 
   UserProfile _profile = const UserProfile();
@@ -303,6 +316,11 @@ class ProfileService extends ChangeNotifier {
 
     String currentHeading = '';
     ProfileEntryKind currentKind = ProfileEntryKind.note;
+    // Résumés are written as "## Experience" followed by "### Role, Company".
+    // The subheadings inherit their section's kind, since only the section
+    // heading names it.
+    ProfileEntryKind sectionKind = ProfileEntryKind.note;
+    int sectionLevel = 0;
     final List<String> bullets = <String>[];
     final StringBuffer prose = StringBuffer();
     int counter = 0;
@@ -334,8 +352,19 @@ class ProfileService extends ChangeNotifier {
 
       if (trimmed.startsWith('#')) {
         flush();
+        final int level = RegExp(r'^#+').firstMatch(trimmed)!.group(0)!.length;
         currentHeading = trimmed.replaceFirst(RegExp(r'^#+\s*'), '');
-        currentKind = _kindForHeading(currentHeading);
+
+        final ProfileEntryKind? named = _kindForHeading(currentHeading);
+        if (named != null) {
+          currentKind = named;
+          sectionKind = named;
+          sectionLevel = level;
+        } else {
+          currentKind = level > sectionLevel
+              ? sectionKind
+              : ProfileEntryKind.note;
+        }
         continue;
       }
 
@@ -362,7 +391,9 @@ class ProfileService extends ChangeNotifier {
     );
   }
 
-  static ProfileEntryKind _kindForHeading(String heading) {
+  /// Returns null when the heading does not name a section kind, so the caller
+  /// can fall back to the enclosing section.
+  static ProfileEntryKind? _kindForHeading(String heading) {
     final String lower = heading.toLowerCase();
     if (lower.contains('experience') ||
         lower.contains('employment') ||
@@ -385,7 +416,7 @@ class ProfileService extends ChangeNotifier {
         lower.contains('impact')) {
       return ProfileEntryKind.achievement;
     }
-    return ProfileEntryKind.note;
+    return null;
   }
 
   /// Instruction used when the user asks a model to structure their résumé.
